@@ -1,6 +1,6 @@
 {
   "name": "@agentiam/langgraph",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "LangGraph JS adapter for Agent IAM",
   "main": "src/index.js",
   "types": "src/index.d.ts",
@@ -22,13 +22,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/agentiam/agentiam.git",
+    "url": "git+https://github.com/golevishal/agentiam.git",
     "directory": "packages/langgraph"
   },
   "bugs": {
-    "url": "https://github.com/agentiam/agentiam/issues"
+    "url": "https://github.com/golevishal/agentiam/issues"
   },
-  "homepage": "https://github.com/agentiam/agentiam/tree/main/packages/langgraph#readme",
+  "homepage": "https://github.com/golevishal/agentiam/tree/main/packages/langgraph#readme",
   "engines": {
     "node": ">=18"
   },

@@ -1,6 +1,6 @@
 {
   "name": "@agentiam/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Policy and approval gateway for AI agent tool calls.",
   "type": "module",
   "main": "./src/index.js",
@@ -27,13 +27,13 @@
   "author": "Agent IAM Contributors",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/agentiam/agentiam.git",
+    "url": "git+https://github.com/golevishal/agentiam.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/agentiam/agentiam/issues"
+    "url": "https://github.com/golevishal/agentiam/issues"
   },
-  "homepage": "https://github.com/agentiam/agentiam/tree/main/packages/core#readme",
+  "homepage": "https://github.com/golevishal/agentiam/tree/main/packages/core#readme",
   "engines": {
     "node": ">=18"
   },

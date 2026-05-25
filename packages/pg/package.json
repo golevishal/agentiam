@@ -1,6 +1,6 @@
 {
   "name": "@agentiam/pg",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "PostgreSQL persistence adapters for Agent IAM",
   "type": "module",
   "main": "src/index.js",
@@ -22,13 +22,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/agentiam/agentiam.git",
+    "url": "git+https://github.com/golevishal/agentiam.git",
     "directory": "packages/pg"
   },
   "bugs": {
-    "url": "https://github.com/agentiam/agentiam/issues"
+    "url": "https://github.com/golevishal/agentiam/issues"
   },
-  "homepage": "https://github.com/agentiam/agentiam/tree/main/packages/pg#readme",
+  "homepage": "https://github.com/golevishal/agentiam/tree/main/packages/pg#readme",
   "engines": {
     "node": ">=18"
   },
