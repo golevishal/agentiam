@@ -2,6 +2,27 @@
 
 Agent IAM is a policy engine and authorization boundary designed to safely govern AI agent tool executions. It provides declarative policies, human-in-the-loop approvals, audit sinks, and checkpointing for safe, concurrent, and auditable tool use.
 
+## Zero-Config Quickstart
+
+Guard a tool call in 10 lines of code, completely in-memory:
+
+```javascript
+import { definePolicy, createAgentIAM } from "@agentiam/core";
+
+// 1. Initialize IAM with a policy
+const iam = createAgentIAM({
+  policy: definePolicy({ rules: [{ id: "safe", when: { action: "read_logs" }, decision: "allow" }] })
+});
+
+// 2. Guard your tool execution
+const request = { actor: { type: "agent", id: "bot" }, action: { name: "read_logs" } };
+const result = await iam.guard(request, async () => {
+  return "Tool actually executed!";
+});
+
+console.log(result.executed); // true
+```
+
 ## Ecosystem
 
 The Agent IAM project consists of three interoperable packages:
