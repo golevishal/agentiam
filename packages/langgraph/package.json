@@ -1,0 +1,21 @@
+{
+  "name": "@agentiam/langgraph",
+  "version": "0.1.0",
+  "description": "LangGraph JS adapter for Agent IAM",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "peerDependencies": {
+    "@agentiam/core": "*",
+    "@langchain/core": "^0.3.0",
+    "@langchain/langgraph": "^0.2.0"
+  },
+  "devDependencies": {
+    "@langchain/core": "^0.3.0",
+    "@langchain/langgraph": "^0.2.0",
+    "@agentiam/core": "*"
+  }
+}

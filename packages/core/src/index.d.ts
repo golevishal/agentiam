@@ -136,10 +136,10 @@ export type AuditRecord = {
   requirements: Requirement[];
   approvedBy: string | null;
   executedAt: string | null;
-  outcome: "evaluated" | "executed" | "approved" | "rejected";
+  outcome: "evaluated" | "executed" | "approved" | "rejected" | "expired" | "resumed";
 };
 
-export type CheckpointStatus = "pending" | "approved" | "rejected" | "expired" | "cancelled";
+export type CheckpointStatus = "pending" | "approved" | "rejected" | "expired" | "cancelled" | "consumed";
 
 export type Checkpoint = {
   id: string;
@@ -149,35 +149,51 @@ export type Checkpoint = {
   decision: EvaluationDecision;
   status: CheckpointStatus;
   createdAt: string;
+  expiresAt: string;
   resolvedAt: string | null;
   approver: Actor | null;
   resolutionReason: string | null;
+  resumePayload?: unknown;
 };
 
 export type AgentIAM = {
   evaluate(request: EvaluationRequest): Promise<EvaluationDecision>;
-  guard<T>(
+  guard<T, R = unknown>(
     request: EvaluationRequest,
     execute: () => T | Promise<T>,
-    options?: { createCheckpoint?: boolean }
+    options?: { createCheckpoint?: boolean; resumeCheckpointId?: string }
   ): Promise<
     | { executed: true; decision: EvaluationDecision; value: T }
+    | { executed: false; resumedFromPayload: true; decision: EvaluationDecision; value: R }
     | { executed: false; decision: EvaluationDecision; checkpoint: Checkpoint | null; reason: string }
   >;
   getAuditLog(): AuditRecord[];
   checkpoints: {
-    create(input: { request: EvaluationRequest; decision: EvaluationDecision }): Checkpoint;
-    get(id: string): Checkpoint | null;
-    list(): Checkpoint[];
-    approve(id: string, resolution?: { approver?: Actor; note?: string; reason?: string }): Checkpoint;
-    reject(id: string, resolution?: { approver?: Actor; note?: string; reason?: string }): Checkpoint;
+    create(input: { request: EvaluationRequest; decision: EvaluationDecision }): Promise<Checkpoint>;
+    get(id: string): Promise<Checkpoint | null>;
+    list(filters?: CheckpointListFilters): Promise<Checkpoint[]>;
+    approve(id: string, resolution?: { approver?: Actor; note?: string; reason?: string; resumePayload?: unknown }): Promise<Checkpoint>;
+    reject(id: string, resolution?: { approver?: Actor; note?: string; reason?: string }): Promise<Checkpoint>;
   };
   policy: Required<Policy>;
 };
 
+export interface CheckpointListFilters {
+  status?: CheckpointStatus;
+}
+
+export interface CheckpointStore {
+  save(checkpoint: Checkpoint): Promise<Checkpoint>;
+  get(id: string): Promise<Checkpoint | null>;
+  update(id: string, updates: Partial<Checkpoint>): Promise<Checkpoint | null>;
+  list(filters?: CheckpointListFilters): Promise<Checkpoint[]>;
+}
+
 export function createAgentIAM(options?: {
+  checkpointStore?: CheckpointStore;
+  checkpointExpirationMs?: number;
   policy?: Policy;
-  auditSink?: (record: AuditRecord) => void;
+  auditSink?: (record: AuditRecord) => void | Promise<void>;
 }): AgentIAM;
 
 export function definePolicy(policy: Policy): Required<Policy>;

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { InMemoryCheckpointStore, isExpired } from "./checkpoints.js";
 
 const DECISION_PRIORITY = {
   allow: 0,
@@ -64,8 +65,15 @@ const DEFAULT_POLICY = {
 export function createAgentIAM(options = {}) {
   const policy = normalizePolicy(options.policy ?? DEFAULT_POLICY);
   const auditLog = [];
-  const checkpointLog = [];
+  const checkpointStore = options.checkpointStore ?? new InMemoryCheckpointStore();
+  const defaultExpirationMs = options.checkpointExpirationMs ?? 24 * 60 * 60 * 1000;
   const auditSink = options.auditSink;
+
+  async function emitAudit(record) {
+    if (auditSink) {
+      await auditSink(structuredClone(record));
+    }
+  }
 
   async function evaluate(request) {
     assertRequest(request);
@@ -105,7 +113,7 @@ export function createAgentIAM(options = {}) {
       }
     };
 
-    recordAudit({
+    await recordAudit({
       id: result.audit.recordId,
       decisionId: result.id,
       timestamp: now,
@@ -132,12 +140,81 @@ export function createAgentIAM(options = {}) {
       throw new TypeError("guard(request, execute) requires an execute function.");
     }
 
+    if (options.resumeCheckpointId) {
+      const cp = await getCheckpoint(options.resumeCheckpointId);
+      if (cp) {
+        if (!deepEqual(request, cp.request)) {
+          return {
+            executed: false,
+            decision: cp.decision,
+            checkpoint: cp,
+            reason: "Resume request does not match the original checkpoint request."
+          };
+        }
+
+        if (cp.status === "approved") {
+          if (cp.decision.decision === "clarification_required" && cp.resumePayload === undefined) {
+            return {
+              executed: false,
+              decision: cp.decision,
+              checkpoint: cp,
+              reason: "Clarification checkpoints cannot be executed directly; they must be resumed with a payload."
+            };
+          }
+
+          if (cp.resumePayload !== undefined) {
+            try {
+              await checkpointStore.update(cp.id, { status: "consumed" });
+            } catch (e) {
+              return {
+                executed: false,
+                decision: cp.decision,
+                checkpoint: cp,
+                reason: `Failed to claim checkpoint '${cp.id}' for resumption.`
+              };
+            }
+            await markOutcome(cp.auditRecordId, "resumed");
+            return {
+              executed: false,
+              resumedFromPayload: true,
+              decision: cp.decision,
+              value: cp.resumePayload
+            };
+          } else {
+            try {
+              await checkpointStore.update(cp.id, { status: "consumed" });
+            } catch (e) {
+              return {
+                executed: false,
+                decision: cp.decision,
+                checkpoint: cp,
+                reason: `Failed to claim checkpoint '${cp.id}' for execution.`
+              };
+            }
+            const value = await execute();
+            await markOutcome(cp.auditRecordId, "executed");
+            return {
+              executed: true,
+              decision: cp.decision,
+              value
+            };
+          }
+        }
+        return {
+          executed: false,
+          decision: cp.decision,
+          checkpoint: cp,
+          reason: `Execution skipped because checkpoint '${options.resumeCheckpointId}' is '${cp.status}'.`
+        };
+      }
+    }
+
     const decision = await evaluate(request);
     const createCheckpoint = options.createCheckpoint ?? true;
 
     if (decision.decision !== "allow") {
-      const checkpoint = decision.decision === "approval_required" && createCheckpoint
-        ? createCheckpointRecord({ request, decision })
+      const checkpoint = (decision.decision === "approval_required" || decision.decision === "clarification_required") && createCheckpoint
+        ? await createCheckpointRecord({ request, decision })
         : null;
 
       return {
@@ -149,7 +226,7 @@ export function createAgentIAM(options = {}) {
     }
 
     const value = await execute();
-    markExecuted(decision.audit.recordId);
+    await markOutcome(decision.audit.recordId, "executed");
 
     return {
       executed: true,
@@ -158,22 +235,26 @@ export function createAgentIAM(options = {}) {
     };
   }
 
-  function recordAudit(record) {
+  async function recordAudit(record) {
     auditLog.push(record);
-    if (auditSink) {
-      auditSink(record);
-    }
+    await emitAudit(record);
   }
 
-  function markExecuted(recordId) {
+  async function markOutcome(recordId, outcome) {
     const record = auditLog.find((item) => item.id === recordId);
     if (record) {
-      record.executedAt = new Date().toISOString();
-      record.outcome = "executed";
+      if (outcome === "executed") {
+        record.executedAt = new Date().toISOString();
+      }
+      record.outcome = outcome;
+      await emitAudit(record);
     }
   }
 
-  function createCheckpointRecord({ request, decision }) {
+  async function createCheckpointRecord({ request, decision }) {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + defaultExpirationMs).toISOString();
+    
     const checkpoint = {
       id: `chk_${randomUUID()}`,
       decisionId: decision.id,
@@ -181,22 +262,41 @@ export function createAgentIAM(options = {}) {
       request,
       decision,
       status: "pending",
-      createdAt: new Date().toISOString(),
+      createdAt: now.toISOString(),
+      expiresAt,
       resolvedAt: null,
       approver: null,
       resolutionReason: null
     };
 
-    checkpointLog.push(checkpoint);
+    await checkpointStore.save(checkpoint);
     return checkpoint;
   }
 
-  function getCheckpoint(id) {
-    return checkpointLog.find((checkpoint) => checkpoint.id === id) ?? null;
+  async function getCheckpoint(id) {
+    const checkpoint = await checkpointStore.get(id);
+    if (!checkpoint) return null;
+
+    if (checkpoint.status === "pending" && isExpired(checkpoint)) {
+      checkpoint.status = "expired";
+      checkpoint.resolvedAt = new Date().toISOString();
+      await checkpointStore.update(id, { 
+        status: "expired", 
+        resolvedAt: checkpoint.resolvedAt 
+      });
+
+      const record = auditLog.find((item) => item.id === checkpoint.auditRecordId);
+      if (record) {
+        record.outcome = "expired";
+        await emitAudit(record);
+      }
+    }
+
+    return checkpoint;
   }
 
-  function resolveCheckpoint(id, status, resolution) {
-    const checkpoint = getCheckpoint(id);
+  async function resolveCheckpoint(id, status, resolution) {
+    const checkpoint = await getCheckpoint(id);
     if (!checkpoint) {
       throw new Error(`Checkpoint not found: ${id}`);
     }
@@ -204,18 +304,27 @@ export function createAgentIAM(options = {}) {
       throw new Error(`Checkpoint '${id}' is already ${checkpoint.status}.`);
     }
 
-    checkpoint.status = status;
-    checkpoint.resolvedAt = new Date().toISOString();
-    checkpoint.approver = resolution.approver ?? null;
-    checkpoint.resolutionReason = resolution.reason ?? resolution.note ?? null;
+    const updates = {
+      status,
+      resolvedAt: new Date().toISOString(),
+      approver: resolution.approver ?? null,
+      resolutionReason: resolution.reason ?? resolution.note ?? null,
+      resumePayload: resolution.resumePayload
+    };
 
-    const record = auditLog.find((item) => item.id === checkpoint.auditRecordId);
-    if (record) {
-      record.approvedBy = status === "approved" ? checkpoint.approver?.id ?? null : null;
-      record.outcome = status;
+    const updated = await checkpointStore.update(id, updates);
+    if (!updated) {
+      throw new Error(`Failed to resolve checkpoint ${id}: update returned null.`);
     }
 
-    return checkpoint;
+    const record = auditLog.find((item) => item.id === updated.auditRecordId);
+    if (record) {
+      record.approvedBy = status === "approved" ? updated.approver?.id ?? null : null;
+      record.outcome = status;
+      await emitAudit(record);
+    }
+
+    return updated;
   }
 
   return {
@@ -225,12 +334,27 @@ export function createAgentIAM(options = {}) {
     checkpoints: {
       create: createCheckpointRecord,
       get: getCheckpoint,
-      list: () => checkpointLog.slice(),
+      list: async (filters = {}) => {
+        return await checkpointStore.list(filters);
+      },
       approve: (id, resolution = {}) => resolveCheckpoint(id, "approved", resolution),
       reject: (id, resolution = {}) => resolveCheckpoint(id, "rejected", resolution)
     },
     policy
   };
+}
+
+
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a == null || b == null) return false;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (!deepEqual(a[key], b[key])) return false;
+  }
+  return true;
 }
 
 export function definePolicy(policy) {

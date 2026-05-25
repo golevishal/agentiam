@@ -1,0 +1,21 @@
+{
+  "name": "@agentiam/pg",
+  "version": "0.1.0",
+  "description": "PostgreSQL persistence adapters for Agent IAM",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@agentiam/core": "*"
+  },
+  "peerDependencies": {
+    "pg": "^8.0.0"
+  },
+  "devDependencies": {
+    "pg": "^8.11.3",
+    "pg-mem": "^2.8.1"
+  }
+}

@@ -109,9 +109,9 @@ test("guard creates a checkpoint by default when approval is required", async ()
   assert.equal(result.executed, false);
   assert.equal(result.decision.decision, "approval_required");
   assert.equal(result.checkpoint.status, "pending");
-  assert.equal(iam.checkpoints.list().length, 1);
+  assert.equal((await iam.checkpoints.list()).length, 1);
 
-  const approved = iam.checkpoints.approve(result.checkpoint.id, {
+  const approved = await iam.checkpoints.approve(result.checkpoint.id, {
     approver: { type: "user", id: "user_123" },
     note: "Reviewed"
   });
@@ -141,7 +141,7 @@ test("guard can skip automatic checkpoint creation", async () => {
 
   assert.equal(result.executed, false);
   assert.equal(result.checkpoint, null);
-  assert.equal(iam.checkpoints.list().length, 0);
+  assert.equal((await iam.checkpoints.list()).length, 0);
 });
 
 test("custom policies can match nested context and numeric operators", async () => {
