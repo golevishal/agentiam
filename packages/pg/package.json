@@ -17,5 +17,33 @@
   "devDependencies": {
     "pg": "^8.11.3",
     "pg-mem": "^2.8.1"
+  },
+  "author": "Agent IAM Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agentiam/agentiam.git",
+    "directory": "packages/pg"
+  },
+  "bugs": {
+    "url": "https://github.com/agentiam/agentiam/issues"
+  },
+  "homepage": "https://github.com/agentiam/agentiam/tree/main/packages/pg#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
   }
 }

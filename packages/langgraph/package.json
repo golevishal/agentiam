@@ -17,5 +17,33 @@
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
     "@agentiam/core": "*"
+  },
+  "author": "Agent IAM Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agentiam/agentiam.git",
+    "directory": "packages/langgraph"
+  },
+  "bugs": {
+    "url": "https://github.com/agentiam/agentiam/issues"
+  },
+  "homepage": "https://github.com/agentiam/agentiam/tree/main/packages/langgraph#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
   }
 }

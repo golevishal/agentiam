@@ -1,187 +1,121 @@
 # Agent IAM
 
-Agent IAM is a tiny policy and approval gateway for AI agent tool calls.
+Agent IAM is a policy engine and authorization boundary designed to safely govern AI agent tool executions. It provides declarative policies, human-in-the-loop approvals, audit sinks, and checkpointing for safe, concurrent, and auditable tool use.
 
-The core idea:
+## Ecosystem
 
-> Agents do not execute tools. Agents request authority to execute tools.
-
-This package gives existing agent stacks one small primitive:
-
-```ts
-const decision = await iam.evaluate(proposedAction);
-```
-
-It does not try to be an agent runtime, UI framework, or compliance platform. It decides whether a proposed action should be allowed, approved, clarified, or denied, then records an audit trail.
-
-The useful bit is not just pausing for approval. Agent IAM tracks the evidence behind an action, the policy version that evaluated it, the requirements that must be satisfied, and the audit record that proves what happened.
-
-## Install
+The Agent IAM project consists of three interoperable packages:
+- `@agentiam/core`: The core policy evaluation engine and execution guard.
+- `@agentiam/langgraph`: A seamless `Command`-driven `Node` adapter for LangGraph.
+- `@agentiam/pg`: Production-ready, highly-concurrent Postgres adapters for storing checkpoints and audit logs.
 
 ```bash
+# Install core
 npm install @agentiam/core
+
+# Install LangGraph integrations
+npm install @agentiam/langgraph @langchain/core @langchain/langgraph
+
+# Install Postgres persistence
+npm install @agentiam/pg pg
 ```
 
-## Quick Start
+## How It Works
 
-```ts
-import { createAgentIAM } from "@agentiam/core";
+Agent IAM intercepts calls from your agent and evaluates them against a centralized policy before the tool actually executes. If a tool execution requires human approval or clarification, Agent IAM skips execution and emits a `Checkpoint`. This checkpoint can later be resumed safely once approval is granted.
 
-const iam = createAgentIAM();
+### 1. Define Policies
 
-const decision = await iam.evaluate({
-  actor: {
-    type: "agent",
-    id: "support-agent",
-    userId: "user_123"
-  },
-  action: {
-    name: "send_email",
-    description: "Send renewal follow-up to customer",
-    input: {
-      to: "alex@acme.com",
-      subject: "Renewal terms",
-      body: "Following up on the renewal terms we discussed."
-    }
-  },
-  context: {
-    environment: "production",
-    surface: "support_dashboard",
-    customerTier: "enterprise"
-  },
-  model: {
-    provider: "openai",
-    model: "gpt-5.2",
-    confidence: 0.74
-  },
-  evidence: [
-    {
-      type: "user_instruction",
-      text: "Follow up with Acme about renewal terms."
-    }
-  ]
-});
-```
+Policies declare the boundary. You specify matchers (`when`), security decisions (`allow`, `deny`, `approval_required`, `clarification_required`), and required evidence.
 
-Example result:
-
-```json
-{
-  "decision": "clarification_required",
-  "risk": "medium",
-  "matchedRules": ["review-external-email", "review-low-confidence"],
-  "requirements": ["preview", "human_approval", "explain_uncertainty"]
-}
-```
-
-## Guarded Execution
-
-Use `guard()` when you want Agent IAM to evaluate and only execute when policy allows it.
-
-```ts
-const result = await iam.guard(
-  {
-    actor: { type: "agent", id: "research-agent" },
-    action: { name: "read_ticket", input: { id: "tic_123" } }
-  },
-  () => ticketClient.read("tic_123")
-);
-
-if (!result.executed) {
-  // Show approval UI, ask for clarification, or block the action.
-  console.log(result.decision);
-  console.log(result.checkpoint);
-}
-```
-
-When `decision === "approval_required"`, `guard()` creates a pending checkpoint by default. You can disable that for low-level integrations:
-
-```ts
-await iam.guard(request, execute, {
-  createCheckpoint: false
-});
-```
-
-## Policy
-
-Policies are deterministic and inspectable by default.
-
-```ts
-import { createAgentIAM, definePolicy } from "@agentiam/core";
+```javascript
+import { definePolicy } from "@agentiam/core";
 
 const policy = definePolicy({
-  id: "customer-facing",
-  version: "2026-05-16",
-  defaultDecision: "approval_required",
-  defaultRisk: "medium",
-  defaultRequirements: ["human_approval"],
+  id: "finance-policy",
   rules: [
     {
-      id: "allow-read-only",
-      when: { action: ["read_*", "search_*"] },
-      decision: "allow",
-      risk: "low"
+      id: "delete-prod-db",
+      when: { action: "delete_database", context: { env: "prod" } },
+      decision: "deny"
     },
     {
-      id: "review-external-email",
-      when: {
-        action: "send_email",
-        input: { to: { externalEmail: true } }
-      },
+      id: "transfer-funds",
+      when: { action: "transfer_money" },
       decision: "approval_required",
-      risk: "medium",
-      requirements: ["preview", "human_approval"]
-    },
-    {
-      id: "block-prod-delete",
-      when: {
-        action: "delete_*",
-        context: { environment: "production" }
-      },
-      decision: "deny",
-      risk: "critical"
+      requirements: ["manager_approval"]
     }
   ]
 });
+```
+
+### 2. Guard Tool Executions (Core)
+
+Use `createAgentIAM` to protect your execution boundary.
+
+```javascript
+import { createAgentIAM } from "@agentiam/core";
 
 const iam = createAgentIAM({ policy });
+
+const request = {
+  actor: { type: "agent", id: "bot1" },
+  action: { name: "transfer_money", input: { amount: 5000 } }
+};
+
+const result = await iam.guard(request, async () => {
+  return await myBankAPI.transfer(5000);
+});
+
+console.log(result.executed); // false
+console.log(result.checkpoint.id); // "chk_123..."
 ```
 
-## Decision Types
+### 3. LangGraph Integration
 
-Agent IAM keeps the first decision model intentionally small:
+If you use LangGraph, replace your `ToolNode` with Agent IAM's `createGuardedToolNode`. It automatically converts IAM checkpoints into LangGraph `interrupt()` commands!
 
-- `allow`: the action can execute
-- `approval_required`: a human or system approver must approve
-- `clarification_required`: the agent needs more context before proceeding
-- `deny`: the action is blocked
+```javascript
+import { createGuardedToolNode } from "@agentiam/langgraph";
 
-## Audit Log
+const guardedTools = createGuardedToolNode({
+  tools: myTools,
+  iam,
+  mapToolCall: (toolCall, state) => ({
+    actor: { type: "agent", id: state.agentId },
+    action: { name: toolCall.name, input: toolCall.args }
+  })
+});
 
-Every evaluation creates an audit record:
-
-```ts
-const audit = iam.getAuditLog();
+// Use `guardedTools` in your graph builder...
 ```
 
-You can also stream records into your own sink:
+### 4. Postgres Persistence
 
-```ts
+For production environments, memory storage isn't enough. Configure Agent IAM to persist checkpoints and emit auditable logs directly to Postgres.
+
+```javascript
+import { Pool } from "pg";
+import { PostgresCheckpointStore, createPostgresAuditSink } from "@agentiam/pg";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 const iam = createAgentIAM({
-  auditSink(record) {
-    console.log(record);
-  }
+  policy,
+  checkpointStore: new PostgresCheckpointStore(pool),
+  auditSink: createPostgresAuditSink(pool)
 });
 ```
 
-Audit records include both `policyId` and `policyVersion`, so old decisions remain explainable after policy changes.
+## Security & Concurrency Guarantees
 
-## Current Scope
+- **Pre-Execution Claims**: Checkpoint resumption locks atomic execution in Postgres *before* the tool logic fires. If two instances of a worker attempt to resume the exact same approved checkpoint at the same time, one succeeds and the other explicitly rejects, eliminating double-execution race conditions.
+- **Fail-Closed Playback**: Once a checkpoint is consumed or expired, any future attempt to replay its ID results in an immediate denial. Checkpoint IDs act as single-use, safely-expiring authorization tokens.
+- **Strict Auditing**: Every transition (evaluation, approval, execution) emits structured updates to the audit sink.
 
-This seed package intentionally focuses on the core evaluator. The next practical layers are:
+## Project Status
 
-- `@agentiam/langgraph`
-- local audit dashboard
-- persistent approval checkpoint store
-- policy packs for customer support, internal ops, finance, and healthcare
-- adapters for OpenAI Agents SDK, Vercel AI SDK, and AG-UI
+Agent IAM is currently in active development.
+
+## License
+MIT
