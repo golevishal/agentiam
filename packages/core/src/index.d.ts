@@ -104,6 +104,17 @@ export type Policy = {
   rules?: PolicyRule[];
 };
 
+export type PolicyValidationFailure = {
+  path: string;
+  ruleId: string | null;
+  message: string;
+};
+
+export class PolicyValidationError extends TypeError {
+  failures: PolicyValidationFailure[];
+  constructor(failures: PolicyValidationFailure[]);
+}
+
 export type EvaluationDecision = {
   id: string;
   timestamp: string;
@@ -199,5 +210,5 @@ export function createAgentIAM(options?: {
 }): AgentIAM;
 
 export function definePolicy(policy: Partial<Policy>): Policy;
-export function validatePolicy(policy: Partial<Policy>): boolean;
+export function validatePolicy(policy: unknown): true;
 export const conservativePolicy: Required<Policy>;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAgentIAM, definePolicy } from "../src/index.js";
+import { createAgentIAM, definePolicy, PolicyValidationError, validatePolicy } from "../src/index.js";
 
 test("allows read-only actions under the conservative default policy", async () => {
   const iam = createAgentIAM();
@@ -271,4 +271,82 @@ test("default approval policies include default requirements when no rule matche
 
   assert.equal(decision.decision, "approval_required");
   assert.deepEqual(decision.requirements, ["human_approval", "preview"]);
+});
+
+test("validatePolicy reports all structural failures with paths", () => {
+  assert.throws(
+    () => validatePolicy({
+      defaultDecision: "maybe",
+      defaultRisk: "severe",
+      rules: [
+        { decision: "review", risk: "unknown" },
+        null,
+        { id: "valid-rule", decision: "deny", risk: "low" }
+      ]
+    }),
+    (error) => {
+      assert.equal(error instanceof PolicyValidationError, true);
+      assert.equal(error.name, "PolicyValidationError");
+      assert.deepEqual(error.failures, [
+        {
+          path: "defaultDecision",
+          ruleId: null,
+          message: "Invalid defaultDecision 'maybe'."
+        },
+        {
+          path: "defaultRisk",
+          ruleId: null,
+          message: "Invalid defaultRisk 'severe'."
+        },
+        {
+          path: "rules[0].id",
+          ruleId: null,
+          message: "Policy rules must have a string 'id'."
+        },
+        {
+          path: "rules[0].decision",
+          ruleId: null,
+          message: "Invalid decision 'review' in rule 'rules[0]'."
+        },
+        {
+          path: "rules[0].risk",
+          ruleId: null,
+          message: "Invalid risk 'unknown' in rule 'rules[0]'."
+        },
+        {
+          path: "rules[1]",
+          ruleId: null,
+          message: "Policy rule must be an object."
+        }
+      ]);
+      return true;
+    }
+  );
+});
+
+test("definePolicy throws PolicyValidationError with rule ids for invalid enums", () => {
+  assert.throws(
+    () => definePolicy({
+      rules: [
+        { id: "bad-decision", decision: "prompt_user" },
+        { id: "bad-risk", risk: "urgent" }
+      ]
+    }),
+    (error) => {
+      assert.equal(error instanceof PolicyValidationError, true);
+      assert.deepEqual(error.failures, [
+        {
+          path: "rules[0].decision",
+          ruleId: "bad-decision",
+          message: "Invalid decision 'prompt_user' in rule 'bad-decision'."
+        },
+        {
+          path: "rules[1].risk",
+          ruleId: "bad-risk",
+          message: "Invalid risk 'urgent' in rule 'bad-risk'."
+        }
+      ]);
+      return true;
+    }
+  );
 });
