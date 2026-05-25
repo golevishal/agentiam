@@ -174,6 +174,8 @@ export type AgentIAM = {
     list(filters?: CheckpointListFilters): Promise<Checkpoint[]>;
     approve(id: string, resolution?: { approver?: Actor; note?: string; reason?: string; resumePayload?: unknown }): Promise<Checkpoint>;
     reject(id: string, resolution?: { approver?: Actor; note?: string; reason?: string }): Promise<Checkpoint>;
+    resume(id: string, payload: any): Promise<Checkpoint>;
+    expire(id: string): Promise<Checkpoint>;
   };
   policy: Required<Policy>;
 };
@@ -196,6 +198,6 @@ export function createAgentIAM(options?: {
   auditSink?: (record: AuditRecord) => void | Promise<void>;
 }): AgentIAM;
 
-export function definePolicy(policy: Policy): Required<Policy>;
-
+export function definePolicy(policy: Partial<Policy>): Policy;
+export function validatePolicy(policy: Partial<Policy>): boolean;
 export const conservativePolicy: Required<Policy>;

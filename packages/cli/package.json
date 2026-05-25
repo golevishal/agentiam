@@ -1,0 +1,41 @@
+{
+  "name": "@agentiam/cli",
+  "version": "0.1.1",
+  "description": "CLI tools for managing Agent IAM checkpoints and audits.",
+  "type": "module",
+  "bin": {
+    "agentiam": "./bin/agentiam.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@agentiam/core": "0.1.1",
+    "@agentiam/pg": "0.1.1",
+    "pg": "^8.13.3",
+    "commander": "^12.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/golevishal/agentiam.git",
+    "directory": "packages/cli"
+  },
+  "author": "Agent IAM Contributors",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/golevishal/agentiam/issues"
+  },
+  "homepage": "https://github.com/golevishal/agentiam/tree/main/packages/cli#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "src",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ]
+}

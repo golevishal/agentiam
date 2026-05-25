@@ -338,7 +338,9 @@ export function createAgentIAM(options = {}) {
         return await checkpointStore.list(filters);
       },
       approve: (id, resolution = {}) => resolveCheckpoint(id, "approved", resolution),
-      reject: (id, resolution = {}) => resolveCheckpoint(id, "rejected", resolution)
+      reject: (id, resolution = {}) => resolveCheckpoint(id, "rejected", resolution),
+      resume: (id, payload) => resolveCheckpoint(id, "approved", { resumePayload: payload }),
+      expire: (id) => resolveCheckpoint(id, "expired", {})
     },
     policy
   };
@@ -358,7 +360,37 @@ function deepEqual(a, b) {
 }
 
 export function definePolicy(policy) {
+  validatePolicy(policy);
   return normalizePolicy(policy);
+}
+
+export function validatePolicy(policy) {
+  if (!policy || typeof policy !== "object") {
+    throw new TypeError("Policy must be an object.");
+  }
+  if (policy.defaultDecision && !["allow", "deny", "approval_required", "clarification_required"].includes(policy.defaultDecision)) {
+    throw new TypeError(`Invalid defaultDecision '${policy.defaultDecision}'.`);
+  }
+  if (policy.defaultRisk && !["low", "medium", "high", "critical"].includes(policy.defaultRisk)) {
+    throw new TypeError(`Invalid defaultRisk '${policy.defaultRisk}'.`);
+  }
+  if (policy.rules && !Array.isArray(policy.rules)) {
+    throw new TypeError("Policy rules must be an array.");
+  }
+  if (policy.rules) {
+    for (const rule of policy.rules) {
+      if (!rule.id || typeof rule.id !== "string") {
+        throw new TypeError("Policy rules must have a string 'id'.");
+      }
+      if (rule.decision && !["allow", "deny", "approval_required", "clarification_required"].includes(rule.decision)) {
+        throw new TypeError(`Invalid decision '${rule.decision}' in rule '${rule.id}'.`);
+      }
+      if (rule.risk && !["low", "medium", "high", "critical"].includes(rule.risk)) {
+        throw new TypeError(`Invalid risk '${rule.risk}' in rule '${rule.id}'.`);
+      }
+    }
+  }
+  return true;
 }
 
 export const conservativePolicy = DEFAULT_POLICY;
