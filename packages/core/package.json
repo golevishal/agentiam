@@ -1,0 +1,27 @@
+{
+  "name": "@agentiam/core",
+  "version": "0.1.0",
+  "description": "Policy and approval gateway for AI agent tool calls.",
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "scripts": {
+    "test": "node --test",
+    "example": "node examples/basic.js"
+  },
+  "keywords": [
+    "agents",
+    "ai",
+    "policy",
+    "human-in-the-loop",
+    "approval",
+    "audit"
+  ],
+  "license": "MIT"
+}

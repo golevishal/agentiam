@@ -1,0 +1,11 @@
+{
+  "name": "agentiam-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present"
+  }
+}
