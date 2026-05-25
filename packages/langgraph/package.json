@@ -1,6 +1,6 @@
 {
   "name": "@agentiam/langgraph",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "LangGraph JS adapter for Agent IAM",
   "main": "src/index.js",
   "types": "src/index.d.ts",

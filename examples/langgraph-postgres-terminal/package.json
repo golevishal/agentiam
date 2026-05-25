@@ -6,9 +6,9 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@agentiam/core": "0.1.1",
-    "@agentiam/langgraph": "0.1.1",
-    "@agentiam/pg": "0.1.1",
+    "@agentiam/core": "0.1.2",
+    "@agentiam/langgraph": "0.1.2",
+    "@agentiam/pg": "0.1.2",
     "@langchain/core": "^0.3.40",
     "@langchain/langgraph": "^0.2.45",
     "@langchain/openai": "^0.4.4",

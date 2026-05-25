@@ -1,6 +1,6 @@
 {
   "name": "@agentiam/core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Policy and approval gateway for AI agent tool calls.",
   "type": "module",
   "main": "./src/index.js",
