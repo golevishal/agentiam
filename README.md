@@ -1,5 +1,9 @@
 # Agent IAM
 
+![npm](https://img.shields.io/npm/v/@agentiam/core)
+![license](https://img.shields.io/github/license/golevishal/agentiam)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
+
 Agent IAM is a policy engine and authorization boundary designed to safely govern AI agent tool executions. It provides declarative policies, human-in-the-loop approvals, audit sinks, and checkpointing for safe, concurrent, and auditable tool use.
 
 ## Zero-Config Quickstart
@@ -136,7 +140,9 @@ const iam = createAgentIAM({
 
 ## Project Status
 
-Agent IAM is currently in active development.
+v0.1.2 — Active development. Core, LangGraph adapter, and 
+Postgres persistence are available. We're looking for early 
+adopters and contributors. Open an issue or start a discussion!
 
 ## License
 MIT
