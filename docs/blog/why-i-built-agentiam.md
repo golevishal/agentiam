@@ -1,62 +1,127 @@
-# Why I Built Agent IAM
+# MCP Gives AI Agents 1000 Tools. Who Decides Which Ones They Can Use?
 
-*A story about 1000 services, zero safety guarantees, and a question I couldn't shake.*
+*Why I built AgentIAM — and why this problem is only going to get bigger.*
 
-At my day job, we're doing something that sounds straightforward: taking internal services and making them available to AI agents through MCP. Hundreds of them. Eventually thousands.
+---
 
-It sounds like plumbing work. Connect service A to agent B. Done.
+At my day job, we are building something that sounds straightforward on paper: taking internal services and making them available to AI agents through MCP. Hundreds of them. Eventually thousands.
 
-Except it isn't.
+It sounds like plumbing work. Connect service A to agent B. Repeat.
 
-The moment you start doing this at scale, a quiet question starts getting louder: **which of these services is actually safe to hand to an agent?**
+Except the moment you start doing this at scale, a quiet question starts getting louder.
 
-Some services are read-only. Some trigger real workflows. Some send emails. Some modify customer data. Some touch production systems. Most of them have sparse documentation, written for humans who already know the context — not for an AI agent that doesn't.
+*Which of these services is actually safe to hand an agent?*
 
-And here's the thing nobody talks about: when an agent calls a tool, there is no moment of pause. No "are you sure?" No policy check. No audit trail. The action just happens.
+Some services are read-only lookups. Some trigger real workflows. Some send external emails. Some modify customer data. Some reach into production systems. Most of them have documentation written for humans who already have the context — not for an AI agent operating autonomously at 3am.
 
-That bothered me.
+And here is the uncomfortable part: when an agent calls a tool, there is no moment of pause. No "are you sure?" No policy check. No audit trail. The action just happens.
 
-## The gap nobody is filling
+That bothered me enough that I couldn't stop thinking about it.
 
-We've spent decades building authorization systems for humans. OAuth, RBAC, IAM policies — all of it assumes a human is eventually in the loop, making a choice.
+---
 
-Agents don't work that way. An agent will call 40 tools in 3 seconds while you're reading its first response. By the time you see the output, things have already happened.
+## The Gap Nobody Is Filling
 
-What we need isn't more powerful agents. We need a control plane that sits between an agent's intention and the execution of that intention. Something that asks: **should this action happen, based on what we know right now?**
+We have spent decades building authorization systems for humans. OAuth, RBAC, IAM policies — all of it assumes a human is eventually in the loop, making a deliberate choice.
 
-That's the idea behind Agent IAM.
+Agents do not work that way.
 
-## What it actually does
+An agent will call 40 tools in 3 seconds while you are still reading its first response. By the time you see the output, things have already happened. Files written. Emails sent. Records updated.
 
-Agent IAM is a small, framework-agnostic library that intercepts tool calls and evaluates them against a policy before anything executes.
+What we need is not smarter agents. We need a control plane that sits between an agent's *intention* and the *execution* of that intention. Something that asks — before anything runs — *should this action happen, based on what we know right now?*
+
+If you have worked with AWS, GCP, or Azure, you already know what this looks like for humans. IAM. Roles, policies, least privilege, audit trails. It is one of the most important primitives in cloud infrastructure.
+
+Nobody has built the equivalent for agents.
+
+That is the idea behind **AgentIAM**.
+
+---
+
+## What It Actually Does
+
+AgentIAM is a small, framework-agnostic library that intercepts tool calls and evaluates them against a policy before anything executes.
 
 ```javascript
-const iam = createAgentIAM({ policy });
+import { definePolicy, createAgentIAM } from "@agentiam/core";
+
+const iam = createAgentIAM({
+  policy: definePolicy({
+    rules: [
+      { id: "safe", when: { action: "read_logs" }, decision: "allow" },
+      { id: "transfer", when: { action: "transfer_money" }, decision: "approval_required" },
+      { id: "nuke", when: { action: "delete_database", context: { env: "prod" } }, decision: "deny" }
+    ]
+  })
+});
 
 const result = await iam.guard(
-  { action: { name: "send_email", input: { to: "customer@example.com" } } },
-  () => sendEmail(...)
+  { actor: { type: "agent", id: "bot1" }, action: { name: "transfer_money", input: { amount: 5000 } } },
+  async () => myBankAPI.transfer(5000)
 );
+
+console.log(result.executed);       // false — paused for approval
+console.log(result.checkpoint.id);  // "chk_abc123..." — resumable when approved
 ```
 
-The guard looks at the action, the context, and any evidence the agent provides, then returns one of four decisions: **allow**, **approval required**, **clarification required**, or **deny**.
+The gate evaluates every tool call and returns one of four decisions:
 
-No execution happens until the guard says so.
+- **allow** — execute immediately
+- **approval_required** — pause, create a checkpoint, wait for a human
+- **clarification_required** — the agent needs to provide more context first
+- **deny** — hard block, never executes
 
-It's not trying to be smarter than your agent. It's the moment of pause that agents currently don't have.
+No execution happens until the policy says so. The agent proposes. The policy decides.
 
-## Why now
+---
 
-MCP is becoming the standard wiring layer between agents and services. That's a good thing — interoperability matters. But it also means agents are about to have access to far more tools, from far more services, with far less oversight.
+## Why MCP Makes This Urgent
 
-The ecosystem needs an authorization layer before that becomes a problem at scale.
+MCP is quickly becoming the standard wiring layer between AI agents and external services. That is genuinely a good thing — interoperability matters, and a common protocol means agents can compose tools from many providers.
 
-Agent IAM is my attempt to build that layer in the open — generic enough to sit on top of any agentic framework, simple enough to adopt in an afternoon.
+But it also means agents are about to have access to far more tools, from far more services, with far less oversight than before.
 
-## This is day one
+Every new MCP server is a new surface area. Every tool call is an action with real-world consequences. And right now, nothing governs which of those actions an agent is actually authorized to take.
 
-I'm building this in 1 hour a day. It's my first serious open source contribution. The core evaluator works. The adapters are next. Policy packs after that.
+AgentIAM is my attempt to build that authorization layer in the open — generic enough to sit on top of any agentic framework, simple enough to adopt in an afternoon.
 
-If you're building with agents and this problem sounds familiar — I'd genuinely love your input. Open an issue. Tell me what your "1000 services" looks like.
+---
 
-→ [github.com/golevishal/agentiam](https://github.com/golevishal/agentiam)
+## LangGraph Integration
+
+If you use LangGraph, the integration is a single drop-in replacement for your `ToolNode`:
+
+```javascript
+import { createGuardedToolNode } from "@agentiam/langgraph";
+
+const guardedTools = createGuardedToolNode({
+  tools: myTools,
+  iam,
+  mapToolCall: (toolCall, state) => ({
+    actor: { type: "agent", id: state.agentId },
+    action: { name: toolCall.name, input: toolCall.args }
+  })
+});
+```
+
+When a tool call requires approval, AgentIAM automatically converts the checkpoint into a LangGraph `interrupt()`. The graph pauses. A human approves. The graph resumes. Exactly the human-in-the-loop pattern LangGraph was designed for — now policy-governed.
+
+---
+
+## This Is Day One
+
+I am building this in one hour a day, after dinner. It is my first serious open source contribution.
+
+The core is working. The LangGraph adapter is live. Postgres persistence is available for production deployments. But there is a lot more to build — SQLite for lightweight local use, adapters for the OpenAI Agents SDK and Vercel AI SDK, better policy validation errors, and eventually a small approval UI.
+
+If you are building with agents and this problem sounds familiar — I would genuinely love your input.
+
+- ⭐ Star the repo: [github.com/golevishal/agentiam](https://github.com/golevishal/agentiam)
+- 🐛 Pick up a good first issue and contribute
+- 💬 Open a discussion — tell me what your "thousand services" looks like
+
+The ecosystem is moving fast. Let's make sure authorization keeps up.
+
+---
+
+*AgentIAM is MIT licensed and available now on npm as `@agentiam/core`.*
