@@ -59,4 +59,4 @@ I'm building this in 1 hour a day. It's my first serious open source contributio
 
 If you're building with agents and this problem sounds familiar — I'd genuinely love your input. Open an issue. Tell me what your "1000 services" looks like.
 
-→ [github.com/yourusername/agentiam](https://github.com/yourusername/agentiam)
+→ [github.com/golevishal/agentiam](https://github.com/golevishal/agentiam)
