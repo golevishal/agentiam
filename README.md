@@ -49,21 +49,7 @@ npm install @agentiam/pg pg
 
 Agent IAM intercepts calls from your agent and evaluates them against a centralized policy before the tool actually executes. If a tool execution requires human approval or clarification, Agent IAM skips execution and emits a `Checkpoint`. This checkpoint can later be resumed safely once approval is granted.
 
-```mermaid
-flowchart TD
-    Agent[AI Agent] -->|Proposes Tool Call| IAM{Agent IAM<br>Policy Engine}
-    
-    IAM -->|allow| Exec[Execute Tool]
-    IAM -->|deny| Block[Block Execution]
-    
-    IAM -->|approval_required| Checkpoint[Emit Checkpoint<br>Pause Agent]
-    
-    Checkpoint -.->|Human Approves| Exec
-    Checkpoint -.->|Human Rejects| Block
-    
-    Exec --> Result[Return Result to Agent]
-    Block --> DenyMsg[Return Error to Agent]
-```
+![Agent IAM Flow Diagram](./docs/images/agentiam_flow_diagram.svg)
 
 ### 1. Define Policies
 
