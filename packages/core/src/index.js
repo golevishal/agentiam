@@ -364,36 +364,106 @@ export function definePolicy(policy) {
   return normalizePolicy(policy);
 }
 
+export class PolicyValidationError extends TypeError {
+  constructor(failures) {
+    const count = failures.length;
+    super(`Policy validation failed with ${count} ${count === 1 ? "failure" : "failures"}.`);
+    this.name = "PolicyValidationError";
+    this.failures = failures;
+  }
+}
+
 export function validatePolicy(policy) {
-  if (!policy || typeof policy !== "object") {
-    throw new TypeError("Policy must be an object.");
+  const failures = [];
+
+  if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
+    throw new PolicyValidationError([
+      {
+        path: "policy",
+        ruleId: null,
+        message: "Policy must be an object."
+      }
+    ]);
   }
-  if (policy.defaultDecision && !["allow", "deny", "approval_required", "clarification_required"].includes(policy.defaultDecision)) {
-    throw new TypeError(`Invalid defaultDecision '${policy.defaultDecision}'.`);
+
+  if (policy.defaultDecision && !isValidDecision(policy.defaultDecision)) {
+    failures.push({
+      path: "defaultDecision",
+      ruleId: null,
+      message: `Invalid defaultDecision '${policy.defaultDecision}'.`
+    });
   }
-  if (policy.defaultRisk && !["low", "medium", "high", "critical"].includes(policy.defaultRisk)) {
-    throw new TypeError(`Invalid defaultRisk '${policy.defaultRisk}'.`);
+
+  if (policy.defaultRisk && !isValidRisk(policy.defaultRisk)) {
+    failures.push({
+      path: "defaultRisk",
+      ruleId: null,
+      message: `Invalid defaultRisk '${policy.defaultRisk}'.`
+    });
   }
+
   if (policy.rules && !Array.isArray(policy.rules)) {
-    throw new TypeError("Policy rules must be an array.");
+    failures.push({
+      path: "rules",
+      ruleId: null,
+      message: "Policy rules must be an array."
+    });
   }
-  if (policy.rules) {
-    for (const rule of policy.rules) {
+
+  if (Array.isArray(policy.rules)) {
+    policy.rules.forEach((rule, index) => {
+      const rulePath = `rules[${index}]`;
+      if (!rule || typeof rule !== "object" || Array.isArray(rule)) {
+        failures.push({
+          path: rulePath,
+          ruleId: null,
+          message: "Policy rule must be an object."
+        });
+        return;
+      }
+
+      const ruleId = typeof rule.id === "string" && rule.id.length > 0 ? rule.id : null;
+      const ruleLabel = ruleId ?? rulePath;
       if (!rule.id || typeof rule.id !== "string") {
-        throw new TypeError("Policy rules must have a string 'id'.");
+        failures.push({
+          path: `${rulePath}.id`,
+          ruleId,
+          message: "Policy rules must have a string 'id'."
+        });
       }
-      if (rule.decision && !["allow", "deny", "approval_required", "clarification_required"].includes(rule.decision)) {
-        throw new TypeError(`Invalid decision '${rule.decision}' in rule '${rule.id}'.`);
+      if (rule.decision && !isValidDecision(rule.decision)) {
+        failures.push({
+          path: `${rulePath}.decision`,
+          ruleId,
+          message: `Invalid decision '${rule.decision}' in rule '${ruleLabel}'.`
+        });
       }
-      if (rule.risk && !["low", "medium", "high", "critical"].includes(rule.risk)) {
-        throw new TypeError(`Invalid risk '${rule.risk}' in rule '${rule.id}'.`);
+      if (rule.risk && !isValidRisk(rule.risk)) {
+        failures.push({
+          path: `${rulePath}.risk`,
+          ruleId,
+          message: `Invalid risk '${rule.risk}' in rule '${ruleLabel}'.`
+        });
       }
-    }
+    });
   }
+
+  if (failures.length > 0) {
+    throw new PolicyValidationError(failures);
+  }
+
   return true;
 }
 
 export const conservativePolicy = DEFAULT_POLICY;
+
+function isValidDecision(value) {
+  return ["allow", "deny", "approval_required", "clarification_required"].includes(value);
+}
+
+function isValidRisk(value) {
+  return ["low", "medium", "high", "critical"].includes(value);
+}
 
 function normalizePolicy(policy) {
   if (!policy || typeof policy !== "object") {
