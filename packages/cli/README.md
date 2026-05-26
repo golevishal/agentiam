@@ -21,6 +21,8 @@ export DATABASE_URL=postgres://user:password@localhost:5432/agentiam
 **List Pending Checkpoints**
 ```bash
 agentiam checkpoints list
+# Machine-readable output
+agentiam checkpoints list --json
 ```
 
 **Approve a Checkpoint**
@@ -31,6 +33,8 @@ agentiam checkpoints approve <checkpoint-id> -n "Approval note"
 **Tail Audit Logs**
 ```bash
 agentiam audit tail -l 20
+# Machine-readable output
+agentiam audit tail -l 20 --json
 ```
 
 ## License
