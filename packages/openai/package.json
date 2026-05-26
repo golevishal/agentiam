@@ -1,0 +1,21 @@
+{
+  "name": "@agentiam/openai",
+  "version": "0.1.2",
+  "description": "Agent IAM adapter for the OpenAI Node.js SDK",
+  "main": "src/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@agentiam/core": "^0.1.2"
+  },
+  "peerDependencies": {
+    "openai": "^4.0.0"
+  },
+  "author": "Vishal Gole",
+  "license": "MIT"
+}

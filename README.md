@@ -29,17 +29,18 @@ console.log(result.executed); // true
 
 ## Ecosystem
 
-The Agent IAM project consists of three interoperable packages:
+The Agent IAM project consists of four interoperable packages:
 - `@agentiam/core`: The core policy evaluation engine and execution guard.
 - `@agentiam/langgraph`: A seamless `Command`-driven `Node` adapter for LangGraph.
+- `@agentiam/openai`: An adapter for guarding raw tool calls from the OpenAI SDK.
 - `@agentiam/pg`: Production-ready, highly-concurrent Postgres adapters for storing checkpoints and audit logs.
 
 ```bash
 # Install core
 npm install @agentiam/core
 
-# Install LangGraph integrations
-npm install @agentiam/langgraph @langchain/core @langchain/langgraph
+# Install integrations
+npm install @agentiam/langgraph @agentiam/openai @langchain/core @langchain/langgraph openai
 
 # Install Postgres persistence
 npm install @agentiam/pg pg
@@ -142,7 +143,7 @@ const iam = createAgentIAM({
 
 ## Project Status
 
-v0.1.2 — Active development. Core, LangGraph adapter, and 
+v0.1.2 — Active development. Core, LangGraph adapter, OpenAI adapter, and 
 Postgres persistence are available. We're looking for early 
 adopters and contributors. Open an issue or start a discussion!
 

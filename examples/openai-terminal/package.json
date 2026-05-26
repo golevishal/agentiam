@@ -1,0 +1,16 @@
+{
+  "name": "openai-terminal",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Example using AgentIAM with OpenAI",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@agentiam/core": "*",
+    "@agentiam/openai": "*",
+    "openai": "^4.0.0",
+    "dotenv": "^16.0.0"
+  }
+}
