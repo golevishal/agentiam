@@ -21,17 +21,25 @@ export function createCLI(pool, exitOverride = false) {
   checkpoints
     .command("list")
     .description("List all pending checkpoints")
-    .action(async () => {
+    .option("--json", "Output as machine-readable JSON")
+    .action(async (options) => {
       const store = new PostgresCheckpointStore(pool);
       try {
         const pending = await store.list({ status: "pending" });
-        if (pending.length === 0) {
+        const rows = pending.map(cp => ({
+          id: cp.id,
+          action: cp.request?.action?.name ?? null,
+          createdAt: cp.createdAt
+        }));
+        if (options.json) {
+          console.log(JSON.stringify(rows));
+        } else if (pending.length === 0) {
           console.log("No pending checkpoints found.");
         } else {
-          console.table(pending.map(cp => ({
-            ID: cp.id,
-            Action: cp.request?.action?.name,
-            Created: cp.createdAt
+          console.table(rows.map(row => ({
+            ID: row.id,
+            Action: row.action,
+            Created: row.createdAt
           })));
         }
       } catch (e) {
@@ -63,13 +71,16 @@ export function createCLI(pool, exitOverride = false) {
     .command("tail")
     .description("Tail recent audit logs")
     .option("-l, --limit <limit>", "Number of records to fetch", "10")
+    .option("--json", "Output as machine-readable JSON")
     .action(async (options) => {
       try {
         const result = await pool.query(
           `SELECT id, action->>'name' as "action", outcome, "timestamp" FROM agentiam_audit_log ORDER BY "timestamp" DESC LIMIT $1`,
           [parseInt(options.limit, 10)]
         );
-        if (result.rows.length === 0) {
+        if (options.json) {
+          console.log(JSON.stringify(result.rows));
+        } else if (result.rows.length === 0) {
           console.log("No audit records found.");
         } else {
           console.table(result.rows);
