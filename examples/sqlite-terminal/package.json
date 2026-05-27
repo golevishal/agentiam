@@ -1,0 +1,15 @@
+{
+  "name": "sqlite-terminal",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Example using AgentIAM with SQLite persistence",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@agentiam/core": "*",
+    "@agentiam/sqlite": "*",
+    "better-sqlite3": "^11.0.0"
+  }
+}
