@@ -1,0 +1,18 @@
+{
+  "name": "vercel-terminal",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Example using AgentIAM with Vercel AI SDK",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@agentiam/core": "*",
+    "@agentiam/vercel-ai": "*",
+    "ai": "^3.0.0",
+    "@ai-sdk/openai": "^0.0.14",
+    "zod": "^3.22.4",
+    "dotenv": "^16.0.0"
+  }
+}

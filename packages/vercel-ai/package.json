@@ -1,0 +1,21 @@
+{
+  "name": "@agentiam/vercel-ai",
+  "version": "0.1.2",
+  "description": "Agent IAM adapter for the Vercel AI SDK",
+  "main": "src/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@agentiam/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "ai": "^3.0.0"
+  },
+  "author": "Vishal Gole",
+  "license": "MIT"
+}
