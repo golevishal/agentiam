@@ -1,0 +1,16 @@
+{
+  "name": "anthropic-terminal",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Example using AgentIAM with the Anthropic SDK",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@agentiam/core": "*",
+    "@agentiam/anthropic": "*",
+    "@anthropic-ai/sdk": "^0.30.0",
+    "dotenv": "^16.4.5"
+  }
+}

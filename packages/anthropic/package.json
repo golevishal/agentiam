@@ -1,0 +1,21 @@
+{
+  "name": "@agentiam/anthropic",
+  "version": "0.1.2",
+  "description": "Agent IAM adapter for the Anthropic SDK",
+  "main": "src/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@agentiam/core": "^0.1.2"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": "^0.30.0"
+  },
+  "author": "Vishal Gole",
+  "license": "MIT"
+}
