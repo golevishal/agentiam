@@ -8,6 +8,16 @@ export function createSqliteAuditSink(db) {
         resource, context, decision, risk, matched_rules, requirements,
         approved_by, executed_at, outcome
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        actor = excluded.actor,
+        resource = excluded.resource,
+        context = excluded.context,
+        risk = excluded.risk,
+        matched_rules = excluded.matched_rules,
+        requirements = excluded.requirements,
+        approved_by = excluded.approved_by,
+        executed_at = excluded.executed_at,
+        outcome = excluded.outcome
     `);
 
     stmt.run(
