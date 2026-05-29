@@ -7,15 +7,42 @@
   "exports": {
     ".": "./src/index.js"
   },
+  "files": ["src"],
   "scripts": {
     "test": "node --test"
   },
+  "keywords": [
+    "agentiam",
+    "ai",
+    "agents",
+    "anthropic",
+    "claude",
+    "tool-use",
+    "authorization",
+    "policy",
+    "guardrails"
+  ],
   "dependencies": {
     "@agentiam/core": "^0.1.2"
   },
   "peerDependencies": {
     "@anthropic-ai/sdk": "^0.30.0"
   },
-  "author": "Vishal Gole",
-  "license": "MIT"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/golevishal/agentiam.git",
+    "directory": "packages/anthropic"
+  },
+  "bugs": {
+    "url": "https://github.com/golevishal/agentiam/issues"
+  },
+  "homepage": "https://github.com/golevishal/agentiam/tree/main/packages/anthropic#readme",
+  "author": "Agent IAM Contributors",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

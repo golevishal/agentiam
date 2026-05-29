@@ -43,12 +43,16 @@ export function createGuardedToolNode(options) {
       }
 
       const request = mapToolCall(toolCall, state);
-      
+
       let resumeCheckpointId = undefined;
       const isResuming = !!config?.configurable?.__pregel_resuming;
       const scratchpad = config?.configurable?.__pregel_scratchpad;
-      
-      if (isResuming && scratchpad?.resume && scratchpad.resume.length > (scratchpad.interruptCounter ?? 0)) {
+
+      if (
+        isResuming &&
+        scratchpad?.resume &&
+        scratchpad.resume.length > (scratchpad.interruptCounter ?? 0)
+      ) {
         const { interrupt } = await import("@langchain/langgraph");
         resumeCheckpointId = interrupt();
       }
@@ -56,14 +60,10 @@ export function createGuardedToolNode(options) {
       let handled = false;
 
       while (!handled) {
-        const result = await iam.guard(
-          request,
-          async () => tool.invoke(toolCall.args, config),
-          {
-            createCheckpoint: !isResuming || !resumeCheckpointId,
-            resumeCheckpointId
-          }
-        );
+        const result = await iam.guard(request, async () => tool.invoke(toolCall.args, config), {
+          createCheckpoint: !isResuming || !resumeCheckpointId,
+          resumeCheckpointId
+        });
 
         if (!result.executed && !result.resumedFromPayload) {
           if (result.decision.decision === "deny") {

@@ -81,9 +81,10 @@ export function createAgentIAM(options = {}) {
     const matchedRules = policy.rules.filter((rule) => matchesWhen(rule.when, request));
     const decision = resolveDecision(policy, matchedRules);
     const risk = resolveRisk(policy, matchedRules);
-    const requirements = matchedRules.length > 0
-      ? unique(matchedRules.flatMap((rule) => rule.requirements ?? []))
-      : policy.defaultRequirements;
+    const requirements =
+      matchedRules.length > 0
+        ? unique(matchedRules.flatMap((rule) => rule.requirements ?? []))
+        : policy.defaultRequirements;
     const reasons = matchedRules.map((rule) => ({
       code: rule.id,
       message: rule.description ?? `Matched policy rule: ${rule.id}`
@@ -158,7 +159,8 @@ export function createAgentIAM(options = {}) {
               executed: false,
               decision: cp.decision,
               checkpoint: cp,
-              reason: "Clarification checkpoints cannot be executed directly; they must be resumed with a payload."
+              reason:
+                "Clarification checkpoints cannot be executed directly; they must be resumed with a payload."
             };
           }
 
@@ -180,25 +182,24 @@ export function createAgentIAM(options = {}) {
               decision: cp.decision,
               value: cp.resumePayload
             };
-          } else {
-            try {
-              await checkpointStore.update(cp.id, { status: "consumed" });
-            } catch (e) {
-              return {
-                executed: false,
-                decision: cp.decision,
-                checkpoint: cp,
-                reason: `Failed to claim checkpoint '${cp.id}' for execution.`
-              };
-            }
-            const value = await execute();
-            await markOutcome(cp.auditRecordId, "executed");
+          }
+          try {
+            await checkpointStore.update(cp.id, { status: "consumed" });
+          } catch (e) {
             return {
-              executed: true,
+              executed: false,
               decision: cp.decision,
-              value
+              checkpoint: cp,
+              reason: `Failed to claim checkpoint '${cp.id}' for execution.`
             };
           }
+          const value = await execute();
+          await markOutcome(cp.auditRecordId, "executed");
+          return {
+            executed: true,
+            decision: cp.decision,
+            value
+          };
         }
         return {
           executed: false,
@@ -213,9 +214,12 @@ export function createAgentIAM(options = {}) {
     const createCheckpoint = options.createCheckpoint ?? true;
 
     if (decision.decision !== "allow") {
-      const checkpoint = (decision.decision === "approval_required" || decision.decision === "clarification_required") && createCheckpoint
-        ? await createCheckpointRecord({ request, decision })
-        : null;
+      const checkpoint =
+        (decision.decision === "approval_required" ||
+          decision.decision === "clarification_required") &&
+        createCheckpoint
+          ? await createCheckpointRecord({ request, decision })
+          : null;
 
       return {
         executed: false,
@@ -254,7 +258,7 @@ export function createAgentIAM(options = {}) {
   async function createCheckpointRecord({ request, decision }) {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + defaultExpirationMs).toISOString();
-    
+
     const checkpoint = {
       id: `chk_${randomUUID()}`,
       decisionId: decision.id,
@@ -280,9 +284,9 @@ export function createAgentIAM(options = {}) {
     if (checkpoint.status === "pending" && isExpired(checkpoint)) {
       checkpoint.status = "expired";
       checkpoint.resolvedAt = new Date().toISOString();
-      await checkpointStore.update(id, { 
-        status: "expired", 
-        resolvedAt: checkpoint.resolvedAt 
+      await checkpointStore.update(id, {
+        status: "expired",
+        resolvedAt: checkpoint.resolvedAt
       });
 
       const record = auditLog.find((item) => item.id === checkpoint.auditRecordId);
@@ -319,7 +323,7 @@ export function createAgentIAM(options = {}) {
 
     const record = auditLog.find((item) => item.id === updated.auditRecordId);
     if (record) {
-      record.approvedBy = status === "approved" ? updated.approver?.id ?? null : null;
+      record.approvedBy = status === "approved" ? (updated.approver?.id ?? null) : null;
       record.outcome = status;
       await emitAudit(record);
     }
@@ -346,10 +350,9 @@ export function createAgentIAM(options = {}) {
   };
 }
 
-
 function deepEqual(a, b) {
   if (a === b) return true;
-  if (typeof a !== 'object' || typeof b !== 'object' || a == null || b == null) return false;
+  if (typeof a !== "object" || typeof b !== "object" || a == null || b == null) return false;
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
   if (keysA.length !== keysB.length) return false;
@@ -597,9 +600,12 @@ function matchesEvidence(pattern, evidenceItems) {
   }
 
   if ("all" in pattern) {
-    checks.push(Array.isArray(pattern.all) && pattern.all.every((matcher) => {
-      return evidenceItems.some((item) => matchesObject(matcher, item));
-    }));
+    checks.push(
+      Array.isArray(pattern.all) &&
+        pattern.all.every((matcher) => {
+          return evidenceItems.some((item) => matchesObject(matcher, item));
+        })
+    );
   }
 
   if (checks.length === 0) {
@@ -615,7 +621,18 @@ function isOperatorObject(value) {
   }
 
   return Object.keys(value).some((key) => {
-    return ["eq", "neq", "in", "exists", "lt", "lte", "gt", "gte", "contains", "externalEmail"].includes(key);
+    return [
+      "eq",
+      "neq",
+      "in",
+      "exists",
+      "lt",
+      "lte",
+      "gt",
+      "gte",
+      "contains",
+      "externalEmail"
+    ].includes(key);
   });
 }
 
@@ -624,13 +641,20 @@ function matchesOperators(operators, actual) {
     if (operator === "eq") return Object.is(actual, expected);
     if (operator === "neq") return !Object.is(actual, expected);
     if (operator === "in") return Array.isArray(expected) && expected.includes(actual);
-    if (operator === "exists") return expected ? actual !== undefined && actual !== null : actual === undefined || actual === null;
+    if (operator === "exists")
+      return expected
+        ? actual !== undefined && actual !== null
+        : actual === undefined || actual === null;
     if (operator === "lt") return Number(actual) < expected;
     if (operator === "lte") return Number(actual) <= expected;
     if (operator === "gt") return Number(actual) > expected;
     if (operator === "gte") return Number(actual) >= expected;
-    if (operator === "contains") return Array.isArray(actual) ? actual.includes(expected) : String(actual).includes(String(expected));
-    if (operator === "externalEmail") return expected ? isExternalEmail(actual) : !isExternalEmail(actual);
+    if (operator === "contains")
+      return Array.isArray(actual)
+        ? actual.includes(expected)
+        : String(actual).includes(String(expected));
+    if (operator === "externalEmail")
+      return expected ? isExternalEmail(actual) : !isExternalEmail(actual);
     return false;
   });
 }

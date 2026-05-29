@@ -1,7 +1,11 @@
-import test from "node:test";
 import assert from "node:assert";
+import test from "node:test";
+import {
+  PostgresCheckpointStore,
+  createPostgresAuditSink,
+  initAgentIAMPostgres
+} from "@agentiam/pg";
 import { newDb } from "pg-mem";
-import { initAgentIAMPostgres, PostgresCheckpointStore, createPostgresAuditSink } from "@agentiam/pg";
 import { createCLI } from "../bin/agentiam.js";
 
 function setup() {
@@ -17,7 +21,7 @@ test("CLI handles checkpoints list, approve, and audit tail", async () => {
   // Seed data
   const store = new PostgresCheckpointStore(pool);
   const sink = createPostgresAuditSink(pool);
-  
+
   await sink({
     id: "aud_1",
     decisionId: "dec_1",
@@ -53,8 +57,12 @@ test("CLI handles checkpoints list, approve, and audit tail", async () => {
   let stdoutData = "";
   const originalLog = console.log;
   const originalTable = console.table;
-  console.log = (msg) => { stdoutData += msg + "\n"; };
-  console.table = (data) => { stdoutData += JSON.stringify(data) + "\n"; };
+  console.log = (msg) => {
+    stdoutData += `${msg}\n`;
+  };
+  console.table = (data) => {
+    stdoutData += `${JSON.stringify(data)}\n`;
+  };
 
   try {
     // 1. Test checkpoints list
@@ -65,7 +73,15 @@ test("CLI handles checkpoints list, approve, and audit tail", async () => {
 
     // 2. Test checkpoints approve
     stdoutData = "";
-    await cli.parseAsync(["node", "agentiam", "checkpoints", "approve", "chk_1", "-n", "Looks good"]);
+    await cli.parseAsync([
+      "node",
+      "agentiam",
+      "checkpoints",
+      "approve",
+      "chk_1",
+      "-n",
+      "Looks good"
+    ]);
     assert.match(stdoutData, /Approved checkpoint chk_1/);
 
     const cp = await store.get("chk_1");
@@ -77,7 +93,6 @@ test("CLI handles checkpoints list, approve, and audit tail", async () => {
     await cli.parseAsync(["node", "agentiam", "audit", "tail", "-l", "5"]);
     assert.match(stdoutData, /aud_1/);
     assert.match(stdoutData, /send_email/);
-
   } finally {
     // Restore stdout
     console.log = originalLog;
@@ -128,8 +143,12 @@ test("CLI --json emits machine-readable JSON for list and tail", async () => {
   const tables = [];
   const originalLog = console.log;
   const originalTable = console.table;
-  console.log = (msg) => { logs.push(msg); };
-  console.table = (data) => { tables.push(data); };
+  console.log = (msg) => {
+    logs.push(msg);
+  };
+  console.table = (data) => {
+    tables.push(data);
+  };
 
   try {
     // checkpoints list --json
@@ -153,17 +172,20 @@ test("CLI --json emits machine-readable JSON for list and tail", async () => {
     assert.strictEqual(logs.length, 1);
     const auditRows = JSON.parse(logs[0]);
     assert.ok(Array.isArray(auditRows));
-    assert.ok(auditRows.some(r => r.id === "aud_json"));
+    assert.ok(auditRows.some((r) => r.id === "aud_json"));
 
     // empty --json output should still be a valid JSON array
     logs.length = 0;
     tables.length = 0;
-    await store.update("chk_json", { status: "approved", resolutionReason: null, resolvedAt: new Date().toISOString() });
+    await store.update("chk_json", {
+      status: "approved",
+      resolutionReason: null,
+      resolvedAt: new Date().toISOString()
+    });
     await cli.parseAsync(["node", "agentiam", "checkpoints", "list", "--json"]);
     assert.strictEqual(tables.length, 0);
     assert.strictEqual(logs.length, 1);
     assert.deepStrictEqual(JSON.parse(logs[0]), []);
-
   } finally {
     console.log = originalLog;
     console.table = originalTable;

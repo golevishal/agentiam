@@ -150,7 +150,13 @@ export type AuditRecord = {
   outcome: "evaluated" | "executed" | "approved" | "rejected" | "expired" | "resumed";
 };
 
-export type CheckpointStatus = "pending" | "approved" | "rejected" | "expired" | "cancelled" | "consumed";
+export type CheckpointStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "cancelled"
+  | "consumed";
 
 export type Checkpoint = {
   id: string;
@@ -174,18 +180,33 @@ export type AgentIAM = {
     execute: () => T | Promise<T>,
     options?: { createCheckpoint?: boolean; resumeCheckpointId?: string }
   ): Promise<
-    | { executed: true; decision: EvaluationDecision; value: T }
+    | { executed: true; resumedFromPayload?: false; decision: EvaluationDecision; value: T }
     | { executed: false; resumedFromPayload: true; decision: EvaluationDecision; value: R }
-    | { executed: false; decision: EvaluationDecision; checkpoint: Checkpoint | null; reason: string }
+    | {
+        executed: false;
+        resumedFromPayload?: false;
+        decision: EvaluationDecision;
+        checkpoint: Checkpoint | null;
+        reason: string;
+      }
   >;
   getAuditLog(): AuditRecord[];
   checkpoints: {
-    create(input: { request: EvaluationRequest; decision: EvaluationDecision }): Promise<Checkpoint>;
+    create(input: {
+      request: EvaluationRequest;
+      decision: EvaluationDecision;
+    }): Promise<Checkpoint>;
     get(id: string): Promise<Checkpoint | null>;
     list(filters?: CheckpointListFilters): Promise<Checkpoint[]>;
-    approve(id: string, resolution?: { approver?: Actor; note?: string; reason?: string; resumePayload?: unknown }): Promise<Checkpoint>;
-    reject(id: string, resolution?: { approver?: Actor; note?: string; reason?: string }): Promise<Checkpoint>;
-    resume(id: string, payload: any): Promise<Checkpoint>;
+    approve(
+      id: string,
+      resolution?: { approver?: Actor; note?: string; reason?: string; resumePayload?: unknown }
+    ): Promise<Checkpoint>;
+    reject(
+      id: string,
+      resolution?: { approver?: Actor; note?: string; reason?: string }
+    ): Promise<Checkpoint>;
+    resume(id: string, payload: unknown): Promise<Checkpoint>;
     expire(id: string): Promise<Checkpoint>;
   };
   policy: Required<Policy>;

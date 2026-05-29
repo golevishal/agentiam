@@ -1,5 +1,16 @@
 import { toJSON } from "./schema.js";
 
+/**
+ * @typedef {import("better-sqlite3").Database} Database
+ * @typedef {import("@agentiam/core").AuditRecord} AuditRecord
+ */
+
+/**
+ * Create an audit sink backed by a SQLite database.
+ *
+ * @param {Database} db - An open better-sqlite3 database instance.
+ * @returns {(record: AuditRecord) => Promise<void>} An async sink that persists audit records.
+ */
 export function createSqliteAuditSink(db) {
   return async (record) => {
     const stmt = db.prepare(`

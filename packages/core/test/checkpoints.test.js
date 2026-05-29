@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert";
-import { createAgentIAM } from "../src/index.js";
+import test from "node:test";
 import { InMemoryCheckpointStore } from "../src/checkpoints.js";
+import { createAgentIAM } from "../src/index.js";
 
 test("checkpoint expires based on expiresAt", async () => {
   // Use a very short expiration
@@ -23,7 +23,7 @@ test("checkpoint expires based on expiresAt", async () => {
 
   // Retrieving it should auto-expire it
   const cp = await iam.checkpoints.get(result.checkpoint.id);
-  
+
   assert.equal(cp.status, "expired");
   assert.ok(cp.resolvedAt);
 });
@@ -69,4 +69,3 @@ test("audit sink receives distinct snapshots across lifecycle changes", async ()
   assert.equal(sinkEvents[0].outcome, "evaluated", "Original event should not have mutated");
   assert.equal(sinkEvents[1].outcome, "approved");
 });
-

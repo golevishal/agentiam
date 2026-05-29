@@ -1,10 +1,10 @@
-import test from "node:test";
 import assert from "node:assert";
+import test from "node:test";
 import Database from "better-sqlite3";
 import { SqliteCheckpointStore, createSqliteAuditSink, initAgentIAMSQLite } from "../src/index.js";
 
 function setup() {
-  const db = new Database(':memory:');
+  const db = new Database(":memory:");
   initAgentIAMSQLite(db);
   const store = new SqliteCheckpointStore(db);
   const auditSink = createSqliteAuditSink(db);
@@ -13,10 +13,14 @@ function setup() {
 
 test("Schema initialization", () => {
   const { db } = setup();
-  const cpTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agentiam_checkpoints'").get();
+  const cpTable = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agentiam_checkpoints'")
+    .get();
   assert.ok(cpTable, "agentiam_checkpoints table should exist");
-  
-  const auditTable = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agentiam_audit_log'").get();
+
+  const auditTable = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agentiam_audit_log'")
+    .get();
   assert.ok(auditTable, "agentiam_audit_log table should exist");
 });
 
@@ -57,7 +61,7 @@ test("Checkpoint expiration is enforced on get()", async () => {
   };
 
   await store.save(mockCheckpoint);
-  
+
   const fetched = await store.get("chk_expired");
   assert.strictEqual(fetched.status, "expired", "Should dynamically return expired status");
 });
@@ -85,12 +89,9 @@ test("Atomic consumption via update()", async () => {
   await store.update("chk_atomic", { status: "consumed" });
 
   // Try to consume it again
-  await assert.rejects(
-    async () => {
-      await store.update("chk_atomic", { status: "consumed" });
-    },
-    /already been consumed/
-  );
+  await assert.rejects(async () => {
+    await store.update("chk_atomic", { status: "consumed" });
+  }, /already been consumed/);
 });
 
 test("Concurrency check: simultaneous update() calls", async () => {
@@ -112,12 +113,12 @@ test("Concurrency check: simultaneous update() calls", async () => {
   // Both try to approve the same checkpoint
   // Only one should succeed, the other should throw
   const [result1, result2] = await Promise.allSettled([
-    store.update("chk_concurrent", { status: 'approved' }),
-    store.update("chk_concurrent", { status: 'approved' })
+    store.update("chk_concurrent", { status: "approved" }),
+    store.update("chk_concurrent", { status: "approved" })
   ]);
-  
+
   assert.ok(
-    [result1, result2].filter(r => r.status === 'fulfilled').length === 1,
+    [result1, result2].filter((r) => r.status === "fulfilled").length === 1,
     "Only one concurrent update should succeed"
   );
 });

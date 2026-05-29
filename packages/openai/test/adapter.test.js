@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert";
+import test from "node:test";
 import { createAgentIAM, definePolicy } from "@agentiam/core";
-import { runGuardedTools, resumeGuardedTool, ApprovalRequiredError } from "../src/index.js";
+import { ApprovalRequiredError, resumeGuardedTool, runGuardedTools } from "../src/index.js";
 
 const toolCalls = [
   {
@@ -65,7 +65,7 @@ test("runGuardedTools returns structured results", async () => {
   });
 
   assert.strictEqual(results.length, 3);
-  
+
   assert.strictEqual(results[0].status, "executed");
   assert.strictEqual(results[0].output, "safe executed");
 
@@ -80,17 +80,14 @@ test("runGuardedTools returns structured results", async () => {
 test("runGuardedTools strict mode throws on pending", async () => {
   const { iam } = setupIAM();
 
-  await assert.rejects(
-    async () => {
-      await runGuardedTools({
-        iam,
-        toolCalls: [toolCalls[2]], // approval_tool
-        tools,
-        strict: true
-      });
-    },
-    ApprovalRequiredError
-  );
+  await assert.rejects(async () => {
+    await runGuardedTools({
+      iam,
+      toolCalls: [toolCalls[2]], // approval_tool
+      tools,
+      strict: true
+    });
+  }, ApprovalRequiredError);
 });
 
 test("resumeGuardedTool executes after approval", async () => {

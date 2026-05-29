@@ -5,8 +5,8 @@ export { ApprovalRequiredError, ClarificationRequiredError, defaultMapToolCall }
 
 /**
  * Runs a list of OpenAI tool calls through AgentIAM.
- * @param {Object} options 
- * @param {import("@agentiam/core").AgentIAM} options.iam 
+ * @param {Object} options
+ * @param {import("@agentiam/core").AgentIAM} options.iam
  * @param {Array} options.toolCalls - ChatCompletionMessageToolCall[]
  * @param {Record<string, Function>} options.tools - Implementation map
  * @param {Function} [options.mapToolCall] - Custom mapper
@@ -49,7 +49,7 @@ export async function runGuardedTools(options) {
     }
 
     const request = mapToolCall(toolCall, { actorId });
-    
+
     let parsedArgs = {};
     try {
       parsedArgs = toolCall.function.arguments ? JSON.parse(toolCall.function.arguments) : {};
@@ -57,10 +57,7 @@ export async function runGuardedTools(options) {
       // Ignored
     }
 
-    const result = await iam.guard(
-      request,
-      async () => toolFunction(parsedArgs)
-    );
+    const result = await iam.guard(request, async () => toolFunction(parsedArgs));
 
     if (result.executed) {
       results.push({
@@ -84,14 +81,15 @@ export async function runGuardedTools(options) {
           output: "Blocked by policy"
         });
       } else if (decision === "approval_required") {
+        const cpId = result.checkpoint ? result.checkpoint.id : "unknown";
         if (strict) {
-          throw new ApprovalRequiredError(result.checkpoint.id, toolName);
+          throw new ApprovalRequiredError(cpId, toolName);
         }
         results.push({
           toolCallId: toolCall.id,
           status: "pending",
-          checkpointId: result.checkpoint.id,
-          output: `Execution paused. Approval required. Checkpoint ID: ${result.checkpoint.id}`
+          checkpointId: cpId,
+          output: `Execution paused. Approval required. Checkpoint ID: ${cpId}`
         });
       } else if (decision === "clarification_required") {
         const cpId = result.checkpoint ? result.checkpoint.id : "unknown";
@@ -113,10 +111,10 @@ export async function runGuardedTools(options) {
 
 /**
  * Resumes a guarded tool after it has been approved.
- * @param {Object} options 
- * @param {import("@agentiam/core").AgentIAM} options.iam 
- * @param {string} options.checkpointId 
- * @param {Record<string, Function>} options.tools 
+ * @param {Object} options
+ * @param {import("@agentiam/core").AgentIAM} options.iam
+ * @param {string} options.checkpointId
+ * @param {Record<string, Function>} options.tools
  * @returns {Promise<any>} The result of the tool execution
  */
 export async function resumeGuardedTool(options) {
@@ -150,16 +148,14 @@ export async function resumeGuardedTool(options) {
 
   const parsedArgs = checkpoint.request.action.input || {};
 
-  const result = await iam.guard(
-    checkpoint.request,
-    async () => toolFunction(parsedArgs),
-    { resumeCheckpointId: checkpointId }
-  );
+  const result = await iam.guard(checkpoint.request, async () => toolFunction(parsedArgs), {
+    resumeCheckpointId: checkpointId
+  });
 
   if (result.executed) {
     return result.value;
   }
-  
+
   if (result.resumedFromPayload) {
     return result.value;
   }

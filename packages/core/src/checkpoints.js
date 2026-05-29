@@ -18,11 +18,18 @@ export class InMemoryCheckpointStore {
     const cp = this.checkpoints.get(id);
     if (!cp) return null;
 
-    if (updates.status === 'consumed' && cp.status !== 'approved') {
-      throw new Error(`Failed to consume checkpoint ${id}: it may have already been consumed or is not approved.`);
+    if (updates.status === "consumed" && cp.status !== "approved") {
+      throw new Error(
+        `Failed to consume checkpoint ${id}: it may have already been consumed or is not approved.`
+      );
     }
 
-    if ((updates.status === 'expired' || updates.status === 'approved' || updates.status === 'rejected') && cp.status !== 'pending') {
+    if (
+      (updates.status === "expired" ||
+        updates.status === "approved" ||
+        updates.status === "rejected") &&
+      cp.status !== "pending"
+    ) {
       throw new Error(`Failed to resolve checkpoint ${id}: it is not pending.`);
     }
 
@@ -32,9 +39,9 @@ export class InMemoryCheckpointStore {
   }
 
   async list(filters = {}) {
-    let cps = Array.from(this.checkpoints.values()).map(cp => ({ ...cp }));
+    let cps = Array.from(this.checkpoints.values()).map((cp) => ({ ...cp }));
     if (filters.status) {
-      cps = cps.filter(cp => cp.status === filters.status);
+      cps = cps.filter((cp) => cp.status === filters.status);
     }
     return cps;
   }

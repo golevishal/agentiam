@@ -30,12 +30,17 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
-  "files": [
-    "src",
-    "bin",
-    "README.md",
-    "LICENSE"
-  ]
+  "keywords": [
+    "agentiam",
+    "ai",
+    "agents",
+    "cli",
+    "checkpoints",
+    "audit",
+    "authorization",
+    "policy"
+  ],
+  "files": ["src", "bin", "README.md", "LICENSE"]
 }

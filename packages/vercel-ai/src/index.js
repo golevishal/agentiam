@@ -1,5 +1,5 @@
 import { ApprovalRequiredError, ClarificationRequiredError } from "./errors.js";
-import { formatPendingResponse, formatDeniedResponse } from "./formatter.js";
+import { formatDeniedResponse, formatPendingResponse } from "./formatter.js";
 
 export { ApprovalRequiredError, ClarificationRequiredError };
 
@@ -12,7 +12,12 @@ export { ApprovalRequiredError, ClarificationRequiredError };
  * @param {boolean} [options.strict] - If true, throws errors on pending checkpoints
  * @returns {Record<string, import('ai').CoreTool>}
  */
-export function wrapGuardedTools({ tools, iam, actor = { type: "agent", id: "default" }, strict = false }) {
+export function wrapGuardedTools({
+  tools,
+  iam,
+  actor = { type: "agent", id: "default" },
+  strict = false
+}) {
   if (!iam || typeof iam.guard !== "function") {
     throw new TypeError("iam must be a valid AgentIAM instance.");
   }
@@ -20,7 +25,7 @@ export function wrapGuardedTools({ tools, iam, actor = { type: "agent", id: "def
     throw new TypeError("tools must be an object containing Vercel AI SDK tool definitions.");
   }
 
-  // To handle Edge Case 2 (strict mode aborts other tools in the batch), 
+  // To handle Edge Case 2 (strict mode aborts other tools in the batch),
   // we could use an abort signal if the user passed one, or just rely on Vercel AI SDK's error propagation.
   // We'll throw immediately. If the user calls them concurrently, the first throw rejects the batch.
 
@@ -31,19 +36,28 @@ export function wrapGuardedTools({ tools, iam, actor = { type: "agent", id: "def
         return [name, tool];
       }
 
+      // Capture the narrowed execute reference so the async closure below keeps
+      // the `function` narrowing from the guard above (TS widens `tool.execute`
+      // back to optional across the closure boundary otherwise).
+      const execute = tool.execute;
+
       return [
         name,
         {
           ...tool,
           execute: async (args, options) => {
+            // `toolCallId` exists on the Vercel AI SDK execution options from v4 onward;
+            // cast keeps this forward-compatible while we still target the v3 peer range.
+            const toolCallId = /** @type {{ toolCallId?: string } | undefined} */ (options)
+              ?.toolCallId;
             const request = {
               actor,
               action: { name, input: args },
-              context: { toolCallId: options?.toolCallId }
+              context: { toolCallId }
             };
 
             const result = await iam.guard(request, async () => {
-              return await tool.execute(args, options);
+              return await execute(args, options);
             });
 
             if (result.executed || result.resumedFromPayload) {
@@ -52,16 +66,17 @@ export function wrapGuardedTools({ tools, iam, actor = { type: "agent", id: "def
 
             const decision = result.decision.decision;
             if (decision === "deny") {
-              // Denied tools don't throw an error in strict mode by default (only pending tools throw), 
+              // Denied tools don't throw an error in strict mode by default (only pending tools throw),
               // but we return the blocked message.
               return formatDeniedResponse();
             }
 
             if (decision === "approval_required") {
+              const cpId = result.checkpoint ? result.checkpoint.id : "unknown";
               if (strict) {
-                throw new ApprovalRequiredError(result.checkpoint.id, name);
+                throw new ApprovalRequiredError(cpId, name);
               }
-              return formatPendingResponse(decision, result.checkpoint.id);
+              return formatPendingResponse(decision, cpId);
             }
 
             if (decision === "clarification_required") {
@@ -87,10 +102,9 @@ export function wrapGuardedTools({ tools, iam, actor = { type: "agent", id: "def
  * @param {import('@agentiam/core').AgentIAM} options.iam
  * @param {string} options.checkpointId
  * @param {Record<string, import('ai').CoreTool>} options.tools
- * @param {any} [options.resumePayload]
  * @returns {Promise<any>}
  */
-export async function resumeGuardedTool({ iam, checkpointId, tools, resumePayload }) {
+export async function resumeGuardedTool({ iam, checkpointId, tools }) {
   if (!iam || typeof iam.guard !== "function") {
     throw new TypeError("iam must be a valid AgentIAM instance.");
   }
@@ -125,18 +139,24 @@ export async function resumeGuardedTool({ iam, checkpointId, tools, resumePayloa
     throw new Error(`Tool ${toolName} does not have an execute function.`);
   }
 
+  // Capture the narrowed execute reference so the async closure passed to
+  // iam.guard below retains the `function` narrowing from the guard above.
+  const execute = tool.execute;
+
   const parsedArgs = checkpoint.request.action.input || {};
   const context = checkpoint.request.context || {};
-  
-  // Create mock options since we don't have the original runtime options
-  // The execute function expects { toolCallId, messages, etc. }
-  const mockOptions = { toolCallId: context.toolCallId };
 
-  const result = await iam.guard(
-    checkpoint.request,
-    async () => tool.execute(parsedArgs, mockOptions),
-    { resumeCheckpointId: checkpointId, resumePayload }
-  );
+  // Create mock options since we don't have the original runtime options.
+  // The execute function expects { toolCallId, messages, etc. }.
+  const mockOptions = /** @type {any} */ ({ toolCallId: context.toolCallId });
+
+  // NOTE: core.guard() reads any resume payload from the stored checkpoint
+  // (set via iam.checkpoints.resume), not from these options. A previous
+  // `resumePayload` argument here was silently ignored and has been removed.
+  // Wiring resume-with-payload through this adapter is tracked for Tier 2.
+  const result = await iam.guard(checkpoint.request, async () => execute(parsedArgs, mockOptions), {
+    resumeCheckpointId: checkpointId
+  });
 
   if (result.executed || result.resumedFromPayload) {
     return result.value;

@@ -41,10 +41,29 @@ CREATE TABLE IF NOT EXISTS agentiam_audit_log (
 CREATE INDEX IF NOT EXISTS idx_agentiam_audit_log_decision_id ON agentiam_audit_log(decision_id);
 `;
 
+/**
+ * Initialize the Agent IAM tables (checkpoints and audit log) in a SQLite database.
+ *
+ * @param {import("better-sqlite3").Database} db - An open better-sqlite3 database instance.
+ * @returns {void}
+ */
 export function initAgentIAMSQLite(db) {
   db.exec(CHECKPOINTS_DDL);
   db.exec(AUDIT_LOG_DDL);
 }
 
-export const toJSON = (val) => val != null ? JSON.stringify(val) : null;
-export const fromJSON = (val) => val != null ? JSON.parse(val) : null;
+/**
+ * Serialize a value to a JSON string, or `null` when the value is `null`/`undefined`.
+ *
+ * @param {unknown} val
+ * @returns {string | null}
+ */
+export const toJSON = (val) => (val != null ? JSON.stringify(val) : null);
+
+/**
+ * Parse a JSON string, or return `null` when the value is `null`/`undefined`.
+ *
+ * @param {string | null | undefined} val
+ * @returns {any}
+ */
+export const fromJSON = (val) => (val != null ? JSON.parse(val) : null);

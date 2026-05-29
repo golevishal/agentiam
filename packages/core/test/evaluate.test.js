@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAgentIAM, definePolicy, PolicyValidationError, validatePolicy } from "../src/index.js";
+import {
+  PolicyValidationError,
+  createAgentIAM,
+  definePolicy,
+  validatePolicy
+} from "../src/index.js";
 
 test("allows read-only actions under the conservative default policy", async () => {
   const iam = createAgentIAM();
@@ -30,7 +35,10 @@ test("requires clarification before approval for low-confidence external email",
   assert.equal(decision.decision, "clarification_required");
   assert.equal(decision.risk, "medium");
   assert.deepEqual(decision.matchedRules, ["review-external-email", "review-low-confidence"]);
-  assert.deepEqual(decision.requirements.sort(), ["explain_uncertainty", "human_approval", "preview"].sort());
+  assert.deepEqual(
+    decision.requirements.sort(),
+    ["explain_uncertainty", "human_approval", "preview"].sort()
+  );
 });
 
 test("includes policy version in decisions and audit records", async () => {
@@ -227,10 +235,7 @@ test("evidence all matcher requires every matcher to have support", async () => 
           id: "needs-instruction-and-tool-result",
           when: {
             evidence: {
-              all: [
-                { type: "user_instruction" },
-                { type: "tool_result", source: "crm" }
-              ]
+              all: [{ type: "user_instruction" }, { type: "tool_result", source: "crm" }]
             }
           },
           decision: "allow",
@@ -275,15 +280,16 @@ test("default approval policies include default requirements when no rule matche
 
 test("validatePolicy reports all structural failures with paths", () => {
   assert.throws(
-    () => validatePolicy({
-      defaultDecision: "maybe",
-      defaultRisk: "severe",
-      rules: [
-        { decision: "review", risk: "unknown" },
-        null,
-        { id: "valid-rule", decision: "deny", risk: "low" }
-      ]
-    }),
+    () =>
+      validatePolicy({
+        defaultDecision: "maybe",
+        defaultRisk: "severe",
+        rules: [
+          { decision: "review", risk: "unknown" },
+          null,
+          { id: "valid-rule", decision: "deny", risk: "low" }
+        ]
+      }),
     (error) => {
       assert.equal(error instanceof PolicyValidationError, true);
       assert.equal(error.name, "PolicyValidationError");
@@ -326,12 +332,13 @@ test("validatePolicy reports all structural failures with paths", () => {
 
 test("definePolicy throws PolicyValidationError with rule ids for invalid enums", () => {
   assert.throws(
-    () => definePolicy({
-      rules: [
-        { id: "bad-decision", decision: "prompt_user" },
-        { id: "bad-risk", risk: "urgent" }
-      ]
-    }),
+    () =>
+      definePolicy({
+        rules: [
+          { id: "bad-decision", decision: "prompt_user" },
+          { id: "bad-risk", risk: "urgent" }
+        ]
+      }),
     (error) => {
       assert.equal(error instanceof PolicyValidationError, true);
       assert.deepEqual(error.failures, [
