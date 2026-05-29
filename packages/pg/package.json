@@ -2,6 +2,17 @@
   "name": "@agentiam/pg",
   "version": "0.1.2",
   "description": "PostgreSQL persistence adapters for Agent IAM",
+  "keywords": [
+    "agentiam",
+    "ai",
+    "agents",
+    "postgres",
+    "postgresql",
+    "pg",
+    "persistence",
+    "checkpoints",
+    "audit"
+  ],
   "type": "module",
   "main": "src/index.js",
   "types": "src/index.d.ts",
@@ -30,16 +41,12 @@
   },
   "homepage": "https://github.com/golevishal/agentiam/tree/main/packages/pg#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "README.md",
-    "LICENSE"
-  ],
+  "files": ["src", "README.md", "LICENSE"],
   "exports": {
     ".": {
       "types": "./src/index.d.ts",

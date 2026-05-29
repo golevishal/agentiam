@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert";
+import test from "node:test";
 import { createAgentIAM, definePolicy } from "@agentiam/core";
-import { runGuardedTools, ApprovalRequiredError } from "../src/index.js";
+import { ApprovalRequiredError, runGuardedTools } from "../src/index.js";
 
 function setupIAM() {
   const policy = definePolicy({
@@ -75,18 +75,15 @@ test("runGuardedTools - throws error in strict mode", async () => {
     }
   ];
 
-  await assert.rejects(
-    async () => {
-      await runGuardedTools({ iam, toolCalls, tools, strict: true });
-    },
-    ApprovalRequiredError
-  );
+  await assert.rejects(async () => {
+    await runGuardedTools({ iam, toolCalls, tools, strict: true });
+  }, ApprovalRequiredError);
 });
 
 test("runGuardedTools - ignores non-tool_use blocks", async () => {
   const iam = setupIAM();
   const tools = { read_file: async () => "Done" };
-  
+
   const toolCalls = [
     { type: "text", text: "I will use a tool now." },
     { type: "tool_use", id: "toolu_1", name: "read_file", input: {} }
@@ -123,7 +120,7 @@ test("runGuardedTools - multi-turn arrays map IDs correctly", async () => {
   const results = await runGuardedTools({ iam, toolCalls, tools });
 
   assert.strictEqual(results.length, 2);
-  
+
   // Verify tool_result blocks match tool_use_id from input
   assert.strictEqual(results[0].tool_use_id, toolCalls[0].id);
   assert.strictEqual(results[1].tool_use_id, toolCalls[1].id);

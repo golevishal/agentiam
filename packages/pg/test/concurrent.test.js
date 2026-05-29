@@ -1,9 +1,9 @@
-import test from 'node:test';
-import assert from 'node:assert';
-import { newDb } from 'pg-mem';
-import { PostgresCheckpointStore } from '../src/checkpoints.js';
-import { initAgentIAMPostgres } from '../src/schema.js';
-import { createAgentIAM } from '@agentiam/core';
+import assert from "node:assert";
+import test from "node:test";
+import { createAgentIAM } from "@agentiam/core";
+import { newDb } from "pg-mem";
+import { PostgresCheckpointStore } from "../src/checkpoints.js";
+import { initAgentIAMPostgres } from "../src/schema.js";
 
 function setup() {
   const db = newDb();
@@ -11,7 +11,7 @@ function setup() {
   return { db, pool: new pool() };
 }
 
-test('PostgresCheckpointStore handles concurrent execution correctly across core guard calls', async () => {
+test("PostgresCheckpointStore handles concurrent execution correctly across core guard calls", async () => {
   const { pool } = setup();
   await initAgentIAMPostgres(pool);
   const store = new PostgresCheckpointStore(pool);
@@ -36,9 +36,11 @@ test('PostgresCheckpointStore handles concurrent execution correctly across core
   };
 
   // Evaluate and create a checkpoint
-  const evalResult = await iam.guard(request, async () => { throw new Error("Should not execute"); });
+  const evalResult = await iam.guard(request, async () => {
+    throw new Error("Should not execute");
+  });
   assert.equal(evalResult.decision.decision, "approval_required");
-  
+
   const cpId = evalResult.checkpoint.id;
 
   // Approve the checkpoint
@@ -49,7 +51,7 @@ test('PostgresCheckpointStore handles concurrent execution correctly across core
   // An execute function that resolves slowly to encourage race conditions if atomic claim fails
   async function slowExecute() {
     executeCount++;
-    return new Promise(resolve => setTimeout(() => resolve("success"), 50));
+    return new Promise((resolve) => setTimeout(() => resolve("success"), 50));
   }
 
   // Two workers try to resume at the same time
@@ -59,8 +61,8 @@ test('PostgresCheckpointStore handles concurrent execution correctly across core
   ]);
 
   // One should succeed, one should fail
-  const successes = results.filter(r => r.executed === true);
-  const failures = results.filter(r => r.executed === false);
+  const successes = results.filter((r) => r.executed === true);
+  const failures = results.filter((r) => r.executed === false);
 
   assert.equal(successes.length, 1);
   assert.equal(failures.length, 1);

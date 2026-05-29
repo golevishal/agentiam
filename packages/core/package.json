@@ -15,14 +15,7 @@
     "test": "node --test",
     "example": "node examples/basic.js"
   },
-  "keywords": [
-    "agents",
-    "ai",
-    "policy",
-    "human-in-the-loop",
-    "approval",
-    "audit"
-  ],
+  "keywords": ["agentiam", "agents", "ai", "policy", "human-in-the-loop", "approval", "audit"],
   "license": "MIT",
   "author": "Agent IAM Contributors",
   "repository": {
@@ -35,14 +28,10 @@
   },
   "homepage": "https://github.com/golevishal/agentiam/tree/main/packages/core#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "README.md",
-    "LICENSE"
-  ]
+  "files": ["src", "README.md", "LICENSE"]
 }

@@ -1,5 +1,10 @@
-import type { Pool, Client } from 'pg';
-import type { CheckpointStore, AuditRecord, Checkpoint, CheckpointListFilters } from '@agentiam/core';
+import type {
+  AuditRecord,
+  Checkpoint,
+  CheckpointListFilters,
+  CheckpointStore
+} from "@agentiam/core";
+import type { Client, Pool } from "pg";
 
 export class PostgresCheckpointStore implements CheckpointStore {
   constructor(pool: Pool | Client);
@@ -9,7 +14,9 @@ export class PostgresCheckpointStore implements CheckpointStore {
   list(filters?: CheckpointListFilters): Promise<Checkpoint[]>;
 }
 
-export function createPostgresAuditSink(pool: Pool | Client): (record: AuditRecord) => Promise<void>;
+export function createPostgresAuditSink(
+  pool: Pool | Client
+): (record: AuditRecord) => Promise<void>;
 
 export function initAgentIAMPostgres(pool: Pool | Client): Promise<void>;
 

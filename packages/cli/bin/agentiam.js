@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import { Command } from "commander";
 import { PostgresCheckpointStore } from "@agentiam/pg";
+import { Command } from "commander";
 import pkg from "pg";
 const { Pool } = pkg;
 
 export function createCLI(pool, exitOverride = false) {
   const program = new Command();
-  
+
   if (exitOverride) {
     program.exitOverride();
   }
@@ -26,7 +26,7 @@ export function createCLI(pool, exitOverride = false) {
       const store = new PostgresCheckpointStore(pool);
       try {
         const pending = await store.list({ status: "pending" });
-        const rows = pending.map(cp => ({
+        const rows = pending.map((cp) => ({
           id: cp.id,
           action: cp.request?.action?.name ?? null,
           createdAt: cp.createdAt
@@ -36,11 +36,13 @@ export function createCLI(pool, exitOverride = false) {
         } else if (pending.length === 0) {
           console.log("No pending checkpoints found.");
         } else {
-          console.table(rows.map(row => ({
-            ID: row.id,
-            Action: row.action,
-            Created: row.createdAt
-          })));
+          console.table(
+            rows.map((row) => ({
+              ID: row.id,
+              Action: row.action,
+              Created: row.createdAt
+            }))
+          );
         }
       } catch (e) {
         console.error(e.message);
@@ -54,9 +56,15 @@ export function createCLI(pool, exitOverride = false) {
     .action(async (id, options) => {
       const store = new PostgresCheckpointStore(pool);
       try {
-        const updated = await store.update(id, { status: "approved", resolutionReason: options.note || null, resolvedAt: new Date().toISOString() });
+        const updated = await store.update(id, {
+          status: "approved",
+          resolutionReason: options.note || null,
+          resolvedAt: new Date().toISOString()
+        });
         if (!updated) {
-          console.error(`Failed to approve checkpoint ${id}. It may not exist or is no longer pending.`);
+          console.error(
+            `Failed to approve checkpoint ${id}. It may not exist or is no longer pending.`
+          );
         } else {
           console.log(`✅ Approved checkpoint ${id}`);
         }
@@ -76,7 +84,7 @@ export function createCLI(pool, exitOverride = false) {
       try {
         const result = await pool.query(
           `SELECT id, action->>'name' as "action", outcome, "timestamp" FROM agentiam_audit_log ORDER BY "timestamp" DESC LIMIT $1`,
-          [parseInt(options.limit, 10)]
+          [Number.parseInt(options.limit, 10)]
         );
         if (options.json) {
           console.log(JSON.stringify(result.rows));
@@ -94,7 +102,7 @@ export function createCLI(pool, exitOverride = false) {
 }
 
 // Only execute automatically if this file is run directly
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "node:url";
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -102,5 +110,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   const pool = new Pool({ connectionString });
-  createCLI(pool).parseAsync(process.argv).finally(() => pool.end());
+  createCLI(pool)
+    .parseAsync(process.argv)
+    .finally(() => pool.end());
 }

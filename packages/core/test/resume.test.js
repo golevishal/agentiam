@@ -1,5 +1,5 @@
-import test from "node:test";
 import assert from "node:assert";
+import test from "node:test";
 import { createAgentIAM } from "../src/index.js";
 
 test("guard resumes execution with provided payload if checkpoint is approved", async () => {
@@ -126,7 +126,7 @@ test("guard fails closed on replay of consumed checkpoints", async () => {
     resumeCheckpointId: cpId
   });
   assert.equal(resumed1.executed, true);
-  
+
   // Checkpoint is now consumed
   const cp = await iam.checkpoints.get(cpId);
   assert.equal(cp.status, "consumed");

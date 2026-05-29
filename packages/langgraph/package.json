@@ -2,6 +2,16 @@
   "name": "@agentiam/langgraph",
   "version": "0.1.2",
   "description": "LangGraph JS adapter for Agent IAM",
+  "keywords": [
+    "agentiam",
+    "ai",
+    "agents",
+    "langgraph",
+    "langchain",
+    "authorization",
+    "policy",
+    "tool-calling"
+  ],
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "module",
@@ -30,16 +40,12 @@
   },
   "homepage": "https://github.com/golevishal/agentiam/tree/main/packages/langgraph#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public"
   },
-  "files": [
-    "src",
-    "README.md",
-    "LICENSE"
-  ],
+  "files": ["src", "README.md", "LICENSE"],
   "exports": {
     ".": {
       "types": "./src/index.d.ts",

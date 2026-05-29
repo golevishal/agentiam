@@ -1,7 +1,7 @@
-import test from "node:test";
 import assert from "node:assert";
+import test from "node:test";
 import { createAgentIAM, definePolicy } from "@agentiam/core";
-import { wrapGuardedTools, resumeGuardedTool, ApprovalRequiredError } from "../src/index.js";
+import { ApprovalRequiredError, resumeGuardedTool, wrapGuardedTools } from "../src/index.js";
 
 const tools = {
   safe_tool: {
@@ -85,12 +85,9 @@ test("Edge case 2: strict mode throws immediately", async () => {
   const { iam } = setupIAM();
   const wrappedTools = wrapGuardedTools({ tools, iam, strict: true });
 
-  await assert.rejects(
-    async () => {
-      await wrappedTools.approval_tool.execute({});
-    },
-    ApprovalRequiredError
-  );
+  await assert.rejects(async () => {
+    await wrappedTools.approval_tool.execute({});
+  }, ApprovalRequiredError);
 });
 
 test("Edge case 3: resumeGuardedTool throws clearly when called on a rejected checkpoint", async () => {
@@ -105,12 +102,9 @@ test("Edge case 3: resumeGuardedTool throws clearly when called on a rejected ch
   await iam.checkpoints.reject(cpId);
 
   // Attempt to resume
-  await assert.rejects(
-    async () => {
-      await resumeGuardedTool({ iam, checkpointId: cpId, tools });
-    },
-    /Cannot resume checkpoint.*because it was rejected/
-  );
+  await assert.rejects(async () => {
+    await resumeGuardedTool({ iam, checkpointId: cpId, tools });
+  }, /Cannot resume checkpoint.*because it was rejected/);
 });
 
 test("resumeGuardedTool executes properly after approval", async () => {

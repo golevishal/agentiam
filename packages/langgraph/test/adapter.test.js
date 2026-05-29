@@ -1,24 +1,24 @@
-import test from "node:test";
 import assert from "node:assert";
-import { tool } from "@langchain/core/tools";
-import { z } from "zod";
-import { StateGraph, MemorySaver, Annotation, Command } from "@langchain/langgraph";
-import { AIMessage, ToolMessage } from "@langchain/core/messages";
+import test from "node:test";
 import { createAgentIAM } from "@agentiam/core";
+import { AIMessage, ToolMessage } from "@langchain/core/messages";
+import { tool } from "@langchain/core/tools";
+import { Annotation, Command, MemorySaver, StateGraph } from "@langchain/langgraph";
+import { z } from "zod";
 import { createGuardedToolNode } from "../src/index.js";
 
 const StateAnnotation = Annotation.Root({
   messages: Annotation({
     reducer: (state, update) => state.concat(update),
-    default: () => [],
-  }),
+    default: () => []
+  })
 });
 
 function setupGraph(iamOpts = {}) {
   const iam = createAgentIAM(iamOpts);
-  
+
   let execCount = 0;
-  
+
   const mockTool = tool(
     async ({ arg }) => {
       execCount++;
@@ -92,11 +92,17 @@ test("adapter denies execution and returns blocked message", async () => {
 
   const config = { configurable: { thread_id: "2" } };
 
-  const res = await graph.invoke({
-    messages: [
-      new AIMessage({ content: "", tool_calls: [{ id: "call_deny", name: "mock_tool", args: { arg: "deny" } }] })
-    ]
-  }, config);
+  const res = await graph.invoke(
+    {
+      messages: [
+        new AIMessage({
+          content: "",
+          tool_calls: [{ id: "call_deny", name: "mock_tool", args: { arg: "deny" } }]
+        })
+      ]
+    },
+    config
+  );
 
   const lastMsg = res.messages[res.messages.length - 1];
   assert.equal(lastMsg._getType(), "tool");
@@ -127,13 +133,13 @@ test("adapter interrupts for approval_required, and resumes with payload", async
   assert.equal(state.tasks[0]?.interrupts?.length, 1);
   const interruptPayload = state.tasks[0].interrupts[0].value;
   assert.equal(interruptPayload.decision, "approval_required");
-  
+
   const cpId = interruptPayload.checkpointId;
   await iam.checkpoints.approve(cpId, { resumePayload: { mocked: "response" } });
 
   const res = await graph.invoke(new Command({ resume: cpId }), config);
 
-  assert.equal(getExecCount(), 0); 
+  assert.equal(getExecCount(), 0);
   const lastMsg = res.messages[res.messages.length - 1];
   assert.equal(lastMsg._getType(), "tool");
   assert.equal(lastMsg.tool_call_id, "call_2");
@@ -190,7 +196,7 @@ test("adapter fails closed on mismatch/replay", async () => {
 
   await iam.checkpoints.approve(cpId);
   await graph.invoke(new Command({ resume: cpId }), config);
-  
+
   const config5 = { configurable: { thread_id: "5" } };
   await graph.invoke(
     {
@@ -210,13 +216,11 @@ test("adapter fails closed on mismatch/replay", async () => {
 
   const res = await graph.invoke(new Command({ resume: cpId5 }), config5);
 
-  assert.equal(getExecCount(), 1); 
+  assert.equal(getExecCount(), 1);
   const lastMsg = res.messages[res.messages.length - 1];
   assert.equal(lastMsg._getType(), "tool");
   assert.ok(lastMsg.content.includes("Execution skipped because checkpoint"));
 });
-
-
 
 test("adapter does not leak pending checkpoints on resume", async () => {
   const { graph, iam } = setupGraph();
@@ -241,12 +245,14 @@ test("adapter does not leak pending checkpoints on resume", async () => {
   await graph.invoke(new Command({ resume: cpId }), config);
 
   const pending = await iam.checkpoints.list({ status: "pending" });
-  const leakedCheckpoints = pending.filter(cp => cp.request.action.input.arg === "requires-approval");
-  
+  const leakedCheckpoints = pending.filter(
+    (cp) => cp.request.action.input.arg === "requires-approval"
+  );
+
   if (leakedCheckpoints.length > 0) {
-     console.log("LEAKED CHECKPOINTS:", JSON.stringify(leakedCheckpoints, null, 2));
+    console.log("LEAKED CHECKPOINTS:", JSON.stringify(leakedCheckpoints, null, 2));
   }
-  
+
   assert.equal(leakedCheckpoints.length, 0, "Should not leak any pending checkpoints on resume");
 });
 
@@ -263,7 +269,7 @@ test("adapter interrupts for clarification_required", async () => {
       ]
     }
   });
-  
+
   const config = { configurable: { thread_id: "7" } };
 
   await graph.invoke(
@@ -282,9 +288,9 @@ test("adapter interrupts for clarification_required", async () => {
   assert.equal(state.tasks[0]?.interrupts?.length, 1);
   const interruptPayload = state.tasks[0].interrupts[0].value;
   assert.equal(interruptPayload.decision, "clarification_required");
-  
+
   const cpId = interruptPayload.checkpointId;
-  
+
   // Try to approve it WITHOUT a payload -> should return a reason and block execution
   await iam.checkpoints.approve(cpId);
   const res = await graph.invoke(new Command({ resume: cpId }), config);
