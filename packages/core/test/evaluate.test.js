@@ -184,6 +184,72 @@ test("custom policies can match nested context and numeric operators", async () 
   assert.deepEqual(decision.requirements, ["account_owner_approval"]);
 });
 
+test("custom policies can match exists false, neq, and nested in operators", async () => {
+  const iam = createAgentIAM({
+    policy: definePolicy({
+      id: "operator-policy",
+      defaultDecision: "approval_required",
+      defaultRisk: "medium",
+      rules: [
+        {
+          id: "allow-without-approval-ticket",
+          when: {
+            action: "draft_reply",
+            context: { approval: { ticket: { exists: false } } }
+          },
+          decision: "allow",
+          risk: "low"
+        },
+        {
+          id: "allow-non-production-deploy",
+          when: {
+            action: "deploy_preview",
+            context: { environment: { neq: "production" } }
+          },
+          decision: "allow",
+          risk: "low"
+        },
+        {
+          id: "allow-supported-region",
+          when: {
+            action: "schedule_job",
+            context: { deployment: { region: { in: ["iad", "fra"] } } }
+          },
+          decision: "allow",
+          risk: "low"
+        }
+      ]
+    })
+  });
+
+  const missingTicket = await iam.evaluate({
+    actor: { type: "agent", id: "support-agent" },
+    action: { name: "draft_reply" },
+    context: { approval: {} }
+  });
+  const nonProduction = await iam.evaluate({
+    actor: { type: "agent", id: "deploy-agent" },
+    action: { name: "deploy_preview" },
+    context: { environment: "staging" }
+  });
+  const supportedRegion = await iam.evaluate({
+    actor: { type: "agent", id: "scheduler-agent" },
+    action: { name: "schedule_job" },
+    context: { deployment: { region: "fra" } }
+  });
+  const unsupportedRegion = await iam.evaluate({
+    actor: { type: "agent", id: "scheduler-agent" },
+    action: { name: "schedule_job" },
+    context: { deployment: { region: "syd" } }
+  });
+
+  assert.deepEqual(missingTicket.matchedRules, ["allow-without-approval-ticket"]);
+  assert.deepEqual(nonProduction.matchedRules, ["allow-non-production-deploy"]);
+  assert.deepEqual(supportedRegion.matchedRules, ["allow-supported-region"]);
+  assert.equal(unsupportedRegion.decision, "approval_required");
+  assert.deepEqual(unsupportedRegion.matchedRules, []);
+});
+
 test("policies can match evidence presence and metadata", async () => {
   const policy = definePolicy({
     id: "evidence-policy",
